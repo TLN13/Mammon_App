@@ -14,7 +14,7 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.logo}>
-        <Text style={styles.logoText}>Mammon</Text>
+        <Text style={styles.logoText}>MAMMON</Text>
       </View>
       <View style={styles.budgetContainer}>
         <Text style={styles.budgetText}>Remaining Budget:</Text>

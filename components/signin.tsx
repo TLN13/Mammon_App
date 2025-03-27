@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     position: 'absolute',
-    bottom: 20,
+    bottom: 30,
     alignItems: 'center',
   },
   footerText: {

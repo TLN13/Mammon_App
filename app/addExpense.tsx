@@ -37,7 +37,7 @@ export default function AddExpenseScreen() {
     return (
         <View style={styles.container}>
             <View style={styles.logo}>
-                <Text style={styles.logoText}>Mammon</Text>
+                <Text style={styles.logoText}>MAMMON</Text>
             </View>
             <View style={styles.title}>
                 <Text style={styles.titleText}>Add Expense</Text>
