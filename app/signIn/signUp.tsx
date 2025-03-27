@@ -1,13 +1,14 @@
 import { StyleSheet, Text, View, TextInput, TouchableOpacity } from 'react-native';
 import { useFonts } from 'expo-font';
 import { useState } from 'react';
+import { authService } from '../../lib/supabase_crud';
 
 export default function SignUp() {
     let [fontsLoaded] = useFonts({
         'Afacad-Regular': require('../../assets/fonts/Afacad-Regular.ttf'),
         'Megrim-Regular': require('../../assets/fonts/Megrim-Regular.ttf'),
     });
-    
+
     const [fName, setFName] = useState('');
     const [lName, setLName] = useState('');
     const [email, setEmail] = useState('');
@@ -55,20 +56,20 @@ function isValidPassword(password: string): boolean {
     return true;
 }
 
-function handleSignUp(fName: string, lName: string, email: string, password: string, dob: string) {
-    if (!isValidName(fName) || !isValidName(lName) || !isValidEmail(email) || !isValidPassword(password) || !isValidDateOfBirth(dob)) {
-        alert('All fields are required.');
-    } else{
-        setFName(fName);
-        setLName(lName);
-        setEmail(email);
-        setPassword(password);
-        setDob(dob);
 
 
+async function handleSignUp(fName: string, lName: string, email: string, password: string, dob: string) {
+  if (!isValidName(fName) || !isValidName(lName) || !isValidEmail(email) || !isValidPassword(password) || !isValidDateOfBirth(dob)) {
+    alert('All fields are required and must be valid.');
+    return;
+  }
 
-    }
-    
+  try {
+    const data = await authService.signUpWithEmail(fName, lName, email, dob, password);
+    alert('Sign-up successful! Please check your email for verification.');
+  } catch (error: any) {
+    alert('Error signing up: ' + error.message);
+  }
 }
 
 return (
@@ -148,7 +149,7 @@ return (
                     onEndEditing={(e) => {
                     const edob = e.nativeEvent.text;
                     if (!isValidDateOfBirth(edob)) {
-                            alert('Invalid Date of Birth. Please use the format YYYY-MM-DD.');
+                    alert('Invalid Date of Birth. Please use the format YYYY-MM-DD.');
                     }
                     }}
                     />
@@ -195,7 +196,7 @@ const styles = StyleSheet.create({
         height: 40,
         borderRadius: 5,
         borderWidth: 2,
-        borderColor: '#8BB04F',
+        borderColor: '#980058',
         textAlign: 'center',
         marginBottom: 10,
     },

@@ -2,7 +2,8 @@ import { StyleSheet, Text, View, TextInput, TouchableOpacity } from 'react-nativ
 import { useRouter } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { useState } from 'react';
-import { getUsers } from '../lib/supabase_crud'
+import { supabase } from '../lib/supabase'
+
 
 
 export default function SignIn() {
@@ -13,6 +14,7 @@ export default function SignIn() {
   });
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false)
   
 
   function isValid(email: string, password: string) {
@@ -21,18 +23,33 @@ export default function SignIn() {
        if (!emailRegex.test(email) || !passwordRegex.test(password)){
           return false;
        }
-  
       return true;
   }
 
-  function handleSignIn(){
-    if (!isValid(email, password)){
-      alert('Please enter email and password');
+
+
+  const handleSignIn = async () => {
+    setLoading(true);
+    if (!isValid(email, password)) {
+      alert('Please enter a valid email and password.');
+      setLoading(false);
+      return;
     }
-    else{
-      
+  
+    try {
+      const {error} = await supabase.auth.signInWithPassword({email, password});
+      if (error){
+        alert('Error signing in: ' + error.message);
+      }
+      else{
+      alert('Sign-in successful!');
+      router.push('/tabs/home'); }
+    } catch (error: any) {
+      alert('Error signing in: ' + error.message);
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <View style={styles.container}>
@@ -41,23 +58,26 @@ export default function SignIn() {
         <Text style={styles.header}>MAMMON</Text>
       </View>
       <View style={styles.formContainer}>
-        <TextInput 
+        <TextInput
           style={styles.input}
-          placeholder="Username"
+          placeholder="Email"
           placeholderTextColor={'#8BB04F'}
-
+          value={email}
+          onChangeText={setEmail}
         />
-        <TextInput 
+        <TextInput
           style={styles.input}
           placeholder="Password"
           placeholderTextColor={'#8BB04F'}
           secureTextEntry
+          value={password}
+          onChangeText={setPassword}
         />
         <TouchableOpacity 
           style={styles.button}
-          onPress={() => router.push('/tabs/home')}
+          onPress={() => (handleSignIn)}
         >
-          <Text style={styles.buttonText}>Sign In</Text>
+          <Text style={styles.buttonText} >Sign In</Text>
         </TouchableOpacity>
       </View>
 
@@ -133,8 +153,8 @@ const styles = StyleSheet.create({
     color: '#8BB04F',
     fontSize: 90,
     fontFamily: 'Megrim-Regular',
-    marginBottom: 20,
     textAlign: 'center',
+    marginBottom: 30,
 
   },
   circle1: {
