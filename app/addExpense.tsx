@@ -11,13 +11,11 @@ export default function AddExpenseScreen() {
       'Megrim-Regular': require('../assets/fonts/Megrim-Regular.ttf'),
     });
     
-    // Form state
     const [description, setDescription] = useState('');
     const [amount, setAmount] = useState('');
     const [date, setDate] = useState('');
     const [category, setCategory] = useState('');
-    
-    // Categories
+   
     const categories = [
         { id: 'bills', name: 'Bills/Utilities' },
         { id: 'subscriptions', name: 'Subscriptions' },
@@ -26,7 +24,7 @@ export default function AddExpenseScreen() {
         { id: 'other', name: 'Other' }
     ];
     
-    // Basic validation
+    
     const isValidDate = (input) => /^\d{2}\/\d{2}\/\d{4}$/.test(input);
     const isValidAmount = (input) => /^\d*\.?\d{0,2}$/.test(input);
 
@@ -130,9 +128,7 @@ export default function AddExpenseScreen() {
                 
                 {/* Buttons Outside Form Container but Inside ScrollView */}
                 <View style={styles.buttonsContainer}>
-                    <TouchableOpacity 
-                        style={styles.submitButton}
-                    >
+                    <TouchableOpacity style={styles.submitButton}>
                         <Text style={styles.buttonText}>Submit</Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
