@@ -1,19 +1,56 @@
 import { StyleSheet, Text, View, TextInput, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useFonts } from 'expo-font';
+import { useState } from 'react';
+import { getUsers } from '../lib/supabase_crud'
+
 
 export default function SignIn() {
   const router = useRouter();
+  let [fontsLoaded] = useFonts({
+    'Afacad-Regular': require('../assets/fonts/Afacad-Regular.ttf'),
+    'Megrim-Regular': require('../assets/fonts/Megrim-Regular.ttf'),
+  });
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  
+
+  function isValid(email: string, password: string) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/;
+       if (!emailRegex.test(email) || !passwordRegex.test(password)){
+          return false;
+       }
+  
+      return true;
+  }
+
+  function handleSignIn(){
+    if (!isValid(email, password)){
+      alert('Please enter email and password');
+    }
+    else{
+      
+    }
+  }
 
   return (
     <View style={styles.container}>
+      <View>
+        <View style={styles.circle1}></View>
+        <Text style={styles.header}>MAMMON</Text>
+      </View>
       <View style={styles.formContainer}>
         <TextInput 
           style={styles.input}
           placeholder="Username"
+          placeholderTextColor={'#8BB04F'}
+
         />
         <TextInput 
           style={styles.input}
-          placeholder="Password" 
+          placeholder="Password"
+          placeholderTextColor={'#8BB04F'}
           secureTextEntry
         />
         <TouchableOpacity 
@@ -26,11 +63,11 @@ export default function SignIn() {
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>New to Mammon?</Text>
-        <TouchableOpacity style={styles.linkButton}>
+        <TouchableOpacity style={styles.linkButton} onPress={() => router.push('/signIn/signUp')}>
           <Text style={styles.linkText}>Sign Up</Text>
         </TouchableOpacity>
         <TouchableOpacity style={styles.linkButton}>
-          <Text style={styles.linkText}>Can't access your account?</Text>
+          <Text style={styles.linkText} onPress={() => router.push('/signIn/passwordRecovery')}>Can't access your account?</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -40,10 +77,11 @@ export default function SignIn() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#290A15',
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
+    width: '100%',
   },
   formContainer: {
     width: '100%',
@@ -51,33 +89,61 @@ const styles = StyleSheet.create({
   },
   input: {
     height: 40,
-    borderColor: 'gray',
-    borderWidth: 1,
-    marginBottom: 12,
+    color: '#8BB04F',
+    borderColor: '#980058',
+    borderWidth: 2,
     paddingHorizontal: 10,
     borderRadius: 5,
+    textAlign: 'center',
+    marginBottom: 15,
+    width: 300,
+    alignContent: 'center',
+    alignSelf: 'center',
   },
   button: {
-    backgroundColor: '#007AFF',
+    backgroundColor: '#8BB04F',
     padding: 10,
     borderRadius: 5,
     alignItems: 'center',
+    width: 150,
+    alignSelf: 'center',
+    marginTop: 15,
   },
   buttonText: {
-    color: 'white',
+    color: '#290A15',
     fontWeight: 'bold',
   },
   footer: {
-    marginTop: 20,
+    position: 'absolute',
+    bottom: 20,
     alignItems: 'center',
   },
   footerText: {
-    marginBottom: 10,
+    color: '#8BB04F',
   },
   linkButton: {
     marginVertical: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: '#8BB04F',
   },
   linkText: {
-    color: '#007AFF',
+    color: '#8BB04F',
   },
+  header: {
+    color: '#8BB04F',
+    fontSize: 90,
+    fontFamily: 'Megrim-Regular',
+    marginBottom: 20,
+    textAlign: 'center',
+
+  },
+  circle1: {
+    position: 'absolute',
+    top: 0,
+    right: 160,
+    width: 100,
+    height: 100,
+    backgroundColor: '#FFCC00',
+    borderRadius: 100,
+  }
 });
