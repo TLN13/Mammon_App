@@ -1,9 +1,11 @@
 import { StyleSheet, Text, View, TextInput, TouchableOpacity } from 'react-native';
 import { useFonts } from 'expo-font';
 import { useState } from 'react';
-import { authService } from '../../lib/supabase_crud';
+import {useRouter} from 'expo-router';
+import { AuthService } from '../../lib/supabase_crud';
 
 export default function SignUp() {
+    const router = useRouter();
     let [fontsLoaded] = useFonts({
         'Afacad-Regular': require('../../assets/fonts/Afacad-Regular.ttf'),
         'Megrim-Regular': require('../../assets/fonts/Megrim-Regular.ttf'),
@@ -49,7 +51,7 @@ function isValidEmail(email: string): boolean {
 }
 
 function isValidPassword(password: string): boolean {
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/;
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{6,}$/;
     if (!passwordRegex.test(password)) {
         return false;
     }
@@ -65,8 +67,9 @@ async function handleSignUp(fName: string, lName: string, email: string, passwor
   }
 
   try {
-    const data = await authService.signUpWithEmail(fName, lName, email, dob, password);
+    const data = await AuthService.signUpWithEmail(email, password, fName, lName, dob);
     alert('Sign-up successful! Please check your email for verification.');
+    router.push('./success');
   } catch (error: any) {
     alert('Error signing up: ' + error.message);
   }
@@ -74,7 +77,11 @@ async function handleSignUp(fName: string, lName: string, email: string, passwor
 
 return (
     <View style={styles.container}>
+        <TouchableOpacity style={styles.backButton} onPress={router.back}>
+            <Text style={styles.back} >Back</Text>
+        </TouchableOpacity>
             <View style={styles.headerContainer}>
+            
             <Text style={styles.header}>MAMMON</Text>
             </View>
             <View style={styles.upperContainer}>
@@ -133,7 +140,7 @@ return (
                     onEndEditing={(e) => {
                     const ePassword = e.nativeEvent.text;
                     if (!isValidPassword(ePassword)) {
-                            alert('Invalid password. Password must contain at least 8 characters, one uppercase letter, one lowercase letter, and one number.');
+                            alert('Invalid password. Password must contain at least 6 characters, one uppercase letter, one lowercase letter, and one number.');
                     }
                     else {
                             setPassword(ePassword);
@@ -153,26 +160,25 @@ return (
                     }
                     }}
                     />
-            </View>
-                <View style={styles.lowerContainer}>
-                    {/*Biometrics checkmark here*/}
-                    <View>
-                        <TouchableOpacity style={styles.signUp} onPress={() => {handleSignUp(fName, lName, email, password, dob)}}>
+                
+                        <TouchableOpacity style={styles.signUp} 
+                        onPress={() => {handleSignUp(fName, lName, email, password, dob)}}
+                        >
                             <Text style={styles.text}>Sign Up</Text>
                         </TouchableOpacity>
-                    </View>
                 </View>
+                
             </View>
 
   );
 }
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#290A15',
-    alignItems: 'center',
-    width: '100%',
-    justifyContent: 'center',
+    container: {
+        flex: 1,
+        backgroundColor: '#290A15',
+        alignItems: 'center',
+        width: '100%',
+        justifyContent: 'center',
     },
     headerContainer: {
         position: 'absolute',
@@ -180,6 +186,19 @@ const styles = StyleSheet.create({
         width: '100%',
         alignItems: 'center',
     },
+    back: {
+        fontFamily: 'Afacad-Regular',
+        color: '#290A15',
+        fontSize: 20,
+      },
+      backButton: {
+        padding: 5,
+        borderRadius: 5,
+        backgroundColor: '#8BB04F',
+        position: 'absolute',
+        top: 60,
+        left: 10,
+      },
     header: {
         fontFamily: 'Megrim-Regular',
         fontSize: 50,
@@ -188,7 +207,7 @@ const styles = StyleSheet.create({
     },
     upperContainer: {
         position: 'absolute',
-        top: 300,
+        top: 225,
     },
     input: {
         color: '#8BB04F',
@@ -202,7 +221,7 @@ const styles = StyleSheet.create({
     },
     lowerContainer: {
         position: 'absolute',
-        bottom: 150,
+        bottom: 300,
         justifyContent: 'center',
         alignItems: 'center',
     },
@@ -228,10 +247,9 @@ const styles = StyleSheet.create({
         padding: 10,
         width: 150,
         borderRadius: 5,
-        marginBottom: 20,
+        alignSelf: 'center'
     },
-    text:
-    {
+    text:{
         color: '#290A15',
         textAlign: 'center',
         fontFamily: 'Afacad-Regular',

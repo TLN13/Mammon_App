@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity } from 'react-native';
 import {useFonts} from 'expo-font';
-import {useRouter} from 'expo-router'
+import {useRouter} from 'expo-router';
+import { AuthService } from '../../lib/supabase_crud';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -10,11 +11,30 @@ export default function HomeScreen() {
     'Megrim-Regular': require('../../assets/fonts/Megrim-Regular.ttf'),
   });
 
+  const handleSignOut = async () => {
+    try {
+      const data = await AuthService.signOut();
+      alert('Sign-out successful!');
+      router.push('/');
+    } catch (error: any) {
+      alert('Error signing out: ' + error.message);
+    }
+  }
+
+
+
   const budgetAmount = 0;
   return (
     <View style={styles.container}>
       <View style={styles.logo}>
         <Text style={styles.logoText}>MAMMON</Text>
+      </View>
+      <View >
+        <TouchableOpacity style={styles.signOut} onPress={handleSignOut}>
+          <Text style={styles.signOutText}>
+            Sign Out
+          </Text>
+        </TouchableOpacity>
       </View>
       <View style={styles.budgetContainer}>
         <Text style={styles.budgetText}>Remaining Budget:</Text>
@@ -47,12 +67,19 @@ const styles = StyleSheet.create({
     color: '#8BB04F',
     fontSize: 25,
     marginBottom: 10,
-    fontFamily: 'AFACAD-Regular'
+    fontFamily: 'Afacad-Regular'
+  },
+  signOut:{
+    top: 10,
+
+  },
+  signOutText:{
+    color: '#8BB04F'
   },
   budgetAmount: {
     color: '#FFCC00',
     fontSize: 85,
-    fontFamily: 'AFACAD-Regular'
+    fontFamily: 'Afacad-Regular'
   },
   purchaseContainer: {
     paddingTop: 40,
@@ -63,7 +90,7 @@ const styles = StyleSheet.create({
   purchaseText: {
     color: '#8BB04F',
     fontSize: 25,
-    fontFamily: 'AFACAD-Regular'
+    fontFamily: 'Afacad-Regular'
   },
   purchaseItem: {
     padding: 10,
@@ -99,7 +126,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#ffffff',
     fontSize: 25,
-    fontFamily: 'AFACAD-Regular'
+    fontFamily: 'Afacad-Regular'
   }
 
 

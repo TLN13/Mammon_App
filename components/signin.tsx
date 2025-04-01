@@ -42,7 +42,6 @@ export default function SignIn() {
         alert('Error signing in: ' + error.message);
       }
       else{
-      alert('Sign-in successful!');
       router.push('/tabs/home'); }
     } catch (error: any) {
       alert('Error signing in: ' + error.message);
@@ -50,6 +49,10 @@ export default function SignIn() {
       setLoading(false);
     }
   };
+
+  if (!fontsLoaded) {
+    return <View />;
+  }
 
   return (
     <View style={styles.container}>
@@ -75,9 +78,9 @@ export default function SignIn() {
         />
         <TouchableOpacity 
           style={styles.button}
-          onPress={() => (handleSignIn)}
+          onPress={() => handleSignIn()}
         >
-          <Text style={styles.buttonText} >Sign In</Text>
+          <Text style={styles.buttonText}>Sign In</Text>
         </TouchableOpacity>
       </View>
 
@@ -132,6 +135,7 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#290A15',
     fontWeight: 'bold',
+    fontFamily: 'Afacad-Regular'
   },
   footer: {
     position: 'absolute',
@@ -140,6 +144,7 @@ const styles = StyleSheet.create({
   },
   footerText: {
     color: '#8BB04F',
+    fontFamily: 'Afacad-Regular'
   },
   linkButton: {
     marginVertical: 5,
