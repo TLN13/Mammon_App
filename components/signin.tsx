@@ -18,37 +18,36 @@ export default function SignIn() {
   
 
   function isValid(email: string, password: string) {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/;
-       if (!emailRegex.test(email) || !passwordRegex.test(password)){
-          return false;
-       }
-      return true;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email) || password.length < 6) {
+        return false;
+    }
+    return true;
   }
-
-
 
   const handleSignIn = async () => {
     setLoading(true);
-    if (!isValid(email, password)) {
-      alert('Please enter a valid email and password.');
-      setLoading(false);
-      return;
-    }
-  
     try {
-      const {error} = await supabase.auth.signInWithPassword({email, password});
-      if (error){
-        alert('Error signing in: ' + error.message);
-      }
-      else{
-      router.push('/tabs/home'); }
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: email.trim(), 
+            password
+        });
+
+        if (error) {
+            if (error.message.includes('Invalid login credentials')) {
+                alert('Incorrect email or password');
+            } else {
+                alert('Error: ' + error.message);
+            }
+        } else {
+            router.push('/tabs/home');
+        }
     } catch (error: any) {
-      alert('Error signing in: ' + error.message);
+        alert('Unexpected error: ' + error.message);
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+};
 
   if (!fontsLoaded) {
     return <View />;
