@@ -32,6 +32,7 @@ export default function SignIn() {
     setLoading(true);
     try {
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
       const {error} = await supabase.auth.signInWithPassword({email, password});
       if (error){
         alert('Error signing in: ' + error.message);
@@ -40,10 +41,31 @@ export default function SignIn() {
       alert('Sign-in successful!');
       router.push('/tabs/home'); }
 =======
+=======
+>>>>>>> Stashed changes
         const { data, error } = await supabase.auth.signInWithPassword({
             email: email.trim(), 
             password
         });
+<<<<<<< Updated upstream
+=======
+
+        if (error) {
+            if (error.message.includes('Invalid login credentials')) {
+                alert('Incorrect email or password');
+            } else {
+                alert('Error: ' + error.message);
+            }
+        } else {
+            router.push('/tabs/home');
+        }
+    } catch (error: any) {
+        alert('Unexpected error: ' + error.message);
+    } finally {
+        setLoading(false);
+    }
+};
+>>>>>>> Stashed changes
 
         if (error) {
             if (error.message.includes('Invalid login credentials')) {

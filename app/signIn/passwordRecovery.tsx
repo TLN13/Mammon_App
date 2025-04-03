@@ -12,6 +12,7 @@ export default function PasswordRecovery() {
   });
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 
   function isValidPassword(password: string): boolean {
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/;
@@ -20,6 +21,9 @@ export default function PasswordRecovery() {
     }
     return true;
   }
+=======
+  
+>>>>>>> Stashed changes
 =======
   
 >>>>>>> Stashed changes
@@ -41,6 +45,7 @@ export default function PasswordRecovery() {
 
   const handlePasswordRecovery = async () => {
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     if (!email) {
       alert('Please enter your email.');
       return;
@@ -54,6 +59,13 @@ export default function PasswordRecovery() {
       alert('All fields are required.');
       return;
     }
+=======
+    // Basic validation
+    if (!email || !dob) {
+      alert('All fields are required.');
+      return;
+    }
+>>>>>>> Stashed changes
     if (!isValidDateOfBirth(dob)) {
       alert('Invalid date of birth format. Use YYYY-MM-DD.');
       return;
@@ -93,6 +105,7 @@ export default function PasswordRecovery() {
         />
         <TextInput 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
           placeholder="New Password"
           style={styles.input}
           placeholderTextColor={"#8BB04F"}
@@ -101,6 +114,8 @@ export default function PasswordRecovery() {
         <TextInput 
           placeholder='Date of Birth (YYYY-MM-DD)'
 =======
+=======
+>>>>>>> Stashed changes
           placeholder="Date of Birth (YYYY-MM-DD)"
 >>>>>>> Stashed changes
           style={styles.input}

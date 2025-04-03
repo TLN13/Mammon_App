@@ -17,6 +17,9 @@
 =======
     "@supabase/supabase-js": "^2.49.4",
     "date-fns": "^4.1.0",
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
     "dotenv": "^16.4.7",
     "expo": "~52.0.40",

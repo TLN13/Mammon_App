@@ -262,4 +262,7 @@ export const UserService = {
     return data.session;
   },
 };
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
