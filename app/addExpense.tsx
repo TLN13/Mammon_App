@@ -32,7 +32,8 @@ export default function AddExpenseScreen() {
         { id: 'Bills', name: 'Bills/Utilities' },
         { id: 'Subscriptions', name: 'Subscriptions' },
         { id: 'Services', name: 'Services' },
-        { id: 'Seisure', name: 'Leisure' },
+        { id: 'Leisure', name: 'Leisure' },
+        { id: 'Personal', name: 'Personal' },
         { id: 'Other', name: 'Other' }
     ];
     
