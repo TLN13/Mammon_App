@@ -1,7 +1,17 @@
-import { useState } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, TextInput, ScrollView } from 'react-native';
+import { useState, useEffect } from 'react';
+import { 
+  StyleSheet, 
+  Text, 
+  View, 
+  TouchableOpacity, 
+  TextInput, 
+  ScrollView, 
+  Alert 
+} from 'react-native';
 import { useFonts } from 'expo-font';
 import { useRouter } from 'expo-router';
+import { PurchaseHistoryService, AuthService, PayPeriodService } from '../lib/supabase_crud';
+import { supabase } from '../lib/supabase';
 
 export default function AddExpenseScreen() {
     const router = useRouter();
@@ -15,18 +25,91 @@ export default function AddExpenseScreen() {
     const [amount, setAmount] = useState('');
     const [date, setDate] = useState('');
     const [category, setCategory] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [userId, setUserId] = useState<string | null>(null);
    
     const categories = [
-        { id: 'bills', name: 'Bills/Utilities' },
-        { id: 'subscriptions', name: 'Subscriptions' },
-        { id: 'services', name: 'Services' },
-        { id: 'leisure', name: 'Leisure' },
-        { id: 'other', name: 'Other' }
+        { id: 'Bills', name: 'Bills/Utilities' },
+        { id: 'Subscriptions', name: 'Subscriptions' },
+        { id: 'Services', name: 'Services' },
+        { id: 'Seisure', name: 'Leisure' },
+        { id: 'Other', name: 'Other' }
     ];
     
+    const isValidDate = (input: string) => /^\d{2}\/\d{2}\/\d{4}$/.test(input);
+    const isValidAmount = (input: string) => /^\d*\.?\d{0,2}$/.test(input);
+
+    useEffect(() => {
+        // Get the current user when component mounts
+        const fetchUser = async () => {
+            try {
+                const { data: { user }, error } = await supabase.auth.getUser();
+                if (error) throw error;
+                if (user) {
+                    setUserId(user.id);
+                }
+            } catch (error) {
+                console.error('Error fetching user:', error);
+                Alert.alert('Error', 'Failed to get user session');
+            }
+        };
+        
+        fetchUser();
+    }, []);
+
+    const handleSubmit = async () => {
+        if (!description || !amount || !date || !category) {
+            Alert.alert('Error', 'Please fill all fields');
+            return;
+        }
     
-    const isValidDate = (input) => /^\d{2}\/\d{2}\/\d{4}$/.test(input);
-    const isValidAmount = (input) => /^\d*\.?\d{0,2}$/.test(input);
+        if (!isValidDate(date)) {
+            Alert.alert('Error', 'Please enter a valid date in MM/DD/YYYY format');
+            return;
+        }
+    
+        if (!isValidAmount(amount) || parseFloat(amount) <= 0) {
+            Alert.alert('Error', 'Please enter a valid amount greater than 0');
+            return;
+        }
+    
+        if (!userId) {
+            Alert.alert('Error', 'User not authenticated. Please sign in.');
+            router.push('/sign-in');
+            return;
+        }
+    
+        setIsSubmitting(true);
+    
+        try {
+            // Get or create current pay period
+            const payperiod_id = await PayPeriodService.getOrCreateCurrentPayPeriod(userId);
+            
+            // Convert date format
+            const [month, day, year] = date.split('/');
+            const purchasedate = `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+            
+            await PurchaseHistoryService.createPurchase(
+                userId,
+                payperiod_id, 
+                purchasedate,
+                parseFloat(amount),
+                `${description} (${category})`
+            );
+    
+            Alert.alert('Success', 'Expense added successfully');
+            setDescription('');
+            setAmount('');
+            setDate('');
+            setCategory('');
+            router.push('/tabs/home');
+        } catch (error) {
+            console.error('Error adding expense:', error);
+            Alert.alert('Error', 'Failed to add expense. Please try again.');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
 
     if (!fontsLoaded) {
         return null;
@@ -126,14 +209,24 @@ export default function AddExpenseScreen() {
                     </View>
                 </View>
                 
-                {/* Buttons Outside Form Container but Inside ScrollView */}
+                {/* Buttons */}
                 <View style={styles.buttonsContainer}>
-                    <TouchableOpacity style={styles.submitButton}>
-                        <Text style={styles.buttonText}>Submit</Text>
+                    <TouchableOpacity 
+                        style={[
+                            styles.submitButton,
+                            isSubmitting && styles.disabledButton
+                        ]} 
+                        onPress={handleSubmit}
+                        disabled={isSubmitting}
+                    >
+                        <Text style={styles.buttonText}>
+                            {isSubmitting ? 'Submitting...' : 'Submit'}
+                        </Text>
                     </TouchableOpacity>
                     <TouchableOpacity 
                         style={styles.cancelButton} 
                         onPress={() => router.push('/tabs/home')}
+                        disabled={isSubmitting}
                     >
                         <Text style={styles.buttonText}>Cancel</Text>
                     </TouchableOpacity>
@@ -269,6 +362,9 @@ const styles = StyleSheet.create({
         padding: 8,
         width: 175,
         borderRadius: 10,
+    },
+    disabledButton: {
+        opacity: 0.6,
     },
     buttonText: {
         color: '#ffffff',
