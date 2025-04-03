@@ -30,13 +30,8 @@ export default function SignIn() {
 
   const handleSignIn = async () => {
     setLoading(true);
-    if (!isValid(email, password)) {
-      alert('Please enter a valid email and password.');
-      setLoading(false);
-      return;
-    }
-  
     try {
+<<<<<<< Updated upstream
       const {error} = await supabase.auth.signInWithPassword({email, password});
       if (error){
         alert('Error signing in: ' + error.message);
@@ -44,12 +39,28 @@ export default function SignIn() {
       else{
       alert('Sign-in successful!');
       router.push('/tabs/home'); }
+=======
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email: email.trim(), 
+            password
+        });
+
+        if (error) {
+            if (error.message.includes('Invalid login credentials')) {
+                alert('Incorrect email or password');
+            } else {
+                alert('Error: ' + error.message);
+            }
+        } else {
+            router.push('/tabs/home');
+        }
+>>>>>>> Stashed changes
     } catch (error: any) {
-      alert('Error signing in: ' + error.message);
+        alert('Unexpected error: ' + error.message);
     } finally {
-      setLoading(false);
+        setLoading(false);
     }
-  };
+};
 
   return (
     <View style={styles.container}>

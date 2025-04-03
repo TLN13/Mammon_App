@@ -80,6 +80,7 @@ export const UserService = {
     
         return true;
       }
+<<<<<<< Updated upstream
 };
       export const authService = {
         async signUpWithEmail(
@@ -93,6 +94,59 @@ export const UserService = {
                 email,
                 password,
               });
+=======
+    ) {
+      const { data, error } = await supabase
+        .from('purchase_history')
+        .update(updates)
+        .eq('purchase_id', purchase_id)
+        .select();
+  
+      if (error) {
+        console.error('Error updating purchase:', error);
+        throw error;
+      }
+  
+      return data?.[0];
+    },
+  
+    // Delete a purchase
+    async deletePurchase(purchase_id: string) {
+      const { error } = await supabase
+        .from('purchase_history')
+        .delete()
+        .eq('purchase_id', purchase_id);
+  
+      if (error) {
+        console.error('Error deleting purchase:', error);
+        throw error;
+      }
+  
+      return true;
+    },
+    async getUserPurchasesByDateRange(
+      user_id: string,
+      startDate: string,
+      endDate: string
+    ) {
+      const { data, error } = await supabase
+        .from('purchase_history')
+        .select('*')
+        .eq('user_id', user_id)
+        .gte('purchasedate', startDate)
+        .lte('purchasedate', endDate)
+        .order('purchasedate', { ascending: false });
+    
+      if (error) {
+        console.error('Error fetching purchases:', error);
+        throw error;
+      }
+    
+      return data;
+    },
+  };
+  
+>>>>>>> Stashed changes
 
             if (error) {
                 console.error('Error signing up:', error);
@@ -127,6 +181,7 @@ export const UserService = {
         async signOut(){
             const {error} = await supabase.auth.signOut();
 
+<<<<<<< Updated upstream
             if(error){
                 console.error('Error signing in:', error);
                 throw error;
@@ -154,3 +209,57 @@ export const UserService = {
             return data.session;
         },
 }
+=======
+    return data;
+  },
+  
+  
+
+  async signInWithEmail(email: string, password: string) {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      console.error('Error signing in:', error);
+      throw error;
+    }
+
+    return data;
+  },
+
+  async signOut() {
+    const { error } = await supabase.auth.signOut();
+
+    if (error) {
+      console.error('Error signing out:', error);
+      throw error;
+    }
+
+    return true;
+  },
+
+  async getCurrentUser() {
+    const { data, error } = await supabase.auth.getUser();
+
+    if (error) {
+      console.error('Error getting current user:', error);
+      throw error;
+    }
+
+    return data.user;
+  },
+
+  async getSession() {
+    const { data, error } = await supabase.auth.getSession();
+
+    if (error) {
+      console.error('Error getting session:', error);
+      throw error;
+    }
+
+    return data.session;
+  },
+};
+>>>>>>> Stashed changes

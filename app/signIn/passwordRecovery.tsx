@@ -5,13 +5,13 @@ import { supabase } from '../../lib/supabase';
 
 export default function PasswordRecovery() {
   const [email, setEmail] = useState('');
-  const [newPassword, setNewPassword] = useState('');
   const [dob, setDob] = useState('');
   let [fontsLoaded] = useFonts({
     'Afacad-Regular': require('../../assets/fonts/Afacad-Regular.ttf'),
     'Megrim-Regular': require('../../assets/fonts/Megrim-Regular.ttf'),
   });
 
+<<<<<<< Updated upstream
 
   function isValidPassword(password: string): boolean {
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/;
@@ -20,6 +20,9 @@ export default function PasswordRecovery() {
     }
     return true;
   }
+=======
+  
+>>>>>>> Stashed changes
 
   function isValidDateOfBirth(dob: string): boolean {
   const dobRegex = /^\d{4}-\d{2}-\d{2}$/;
@@ -37,6 +40,7 @@ export default function PasswordRecovery() {
   }
 
   const handlePasswordRecovery = async () => {
+<<<<<<< Updated upstream
     if (!email) {
       alert('Please enter your email.');
       return;
@@ -44,6 +48,25 @@ export default function PasswordRecovery() {
   
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email);
+=======
+    // Basic validation
+    if (!email || !dob) {
+      alert('All fields are required.');
+      return;
+    }
+    if (!isValidDateOfBirth(dob)) {
+      alert('Invalid date of birth format. Use YYYY-MM-DD.');
+      return;
+    }
+    
+    // Here we call the Supabase resetPasswordForEmail method.
+    // Note: This method sends a recovery email. To actually update the password
+    // immediately after verifying the dob, you'll need custom backend logic.
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/updatePassword`, // adjust as needed
+      });
+>>>>>>> Stashed changes
       if (error) {
         alert('Error occured:' + error.message);
         throw error;
@@ -69,6 +92,7 @@ export default function PasswordRecovery() {
           onChangeText={setEmail}
         />
         <TextInput 
+<<<<<<< Updated upstream
           placeholder="New Password"
           style={styles.input}
           placeholderTextColor={"#8BB04F"}
@@ -76,6 +100,9 @@ export default function PasswordRecovery() {
         />
         <TextInput 
           placeholder='Date of Birth (YYYY-MM-DD)'
+=======
+          placeholder="Date of Birth (YYYY-MM-DD)"
+>>>>>>> Stashed changes
           style={styles.input}
           placeholderTextColor='#8BB04F'
           maxLength={10}
