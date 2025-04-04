@@ -9,7 +9,7 @@ export default function UpdatePassword() {
 
   const handleUpdatePassword = async () => {
     if (!password || password.length < 6) {
-      alert('Password must be at least 6 characters long.');
+      alert('Password must be at least 6 characters long, includes an uppercase letter, one lowercase letter, one number, and one special character.');
       return;
     }
 
@@ -33,6 +33,7 @@ export default function UpdatePassword() {
 
   return (
     <View style={styles.container}>
+      <Text></Text>
       <Text style={styles.header}>Update Password</Text>
       <TextInput
         placeholder="New Password"

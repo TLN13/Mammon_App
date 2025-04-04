@@ -51,7 +51,7 @@ function isValidEmail(email: string): boolean {
 }
 
 function isValidPassword(password: string): boolean {
-    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{6,}$/;
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[a-zA-Z\d@$!%*?&]{6,}$/;
     if (!passwordRegex.test(password)) {
         return false;
     }
@@ -140,7 +140,7 @@ return (
                     onEndEditing={(e) => {
                     const ePassword = e.nativeEvent.text;
                     if (!isValidPassword(ePassword)) {
-                            alert('Invalid password. Password must contain at least 6 characters, one uppercase letter, one lowercase letter, and one number.');
+                            alert('Invalid password. Password must contain at least 6 characters, one uppercase letter, one lowercase letter, one number, and one special character.');
                     }
                     else {
                             setPassword(ePassword);

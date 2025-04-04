@@ -87,124 +87,144 @@ export const UserService = {
 };
 
 export const PayPeriodService = {
-    async getOrCreateCurrentPayPeriod(userId: string): Promise<string> {
-      // First try to find an existing current pay period
-      const { data: existing, error: findError } = await supabase
-        .from('budget')
-        .select('payperiod_id')
-        .eq('user_id', userId)
-        .gte('payperiod_end', new Date().toISOString())
-        .lte('payperiod_start', new Date().toISOString())
-        .single();
-  
-      if (!findError && existing) {
-        return existing.payperiod_id;
-      }
-  
-      // If none exists, create a new one
-      const { data: newPayPeriod, error: createError } = await supabase
-        .from('budget')
-        .insert([{
-          user_id: userId,
-          payperiod_start: new Date().toISOString(),
-          payperiod_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
-          budgetlimit: 0,
-          budgetbalance: 0,
-          setaside: 0,
-          savingsgoal: 0
-        }])
-        .select('payperiod_id')
-        .single();
-  
-      if (createError) throw createError;
-      return newPayPeriod.payperiod_id;
+  async getOrCreateCurrentPayPeriod(userId: string): Promise<string> {
+    // First try to find an existing current pay period
+    const { data: existing, error: findError } = await supabase
+      .from('budget')
+      .select('payperiod_id')
+      .eq('user_id', userId)
+      .gte('payperiod_end', new Date().toISOString())
+      .lte('payperiod_start', new Date().toISOString())
+      .single();
+
+    if (!findError && existing) {
+      return existing.payperiod_id;
     }
-  };
-  
+
+    // If none exists, create a new one
+    const { data: newPayPeriod, error: createError } = await supabase
+      .from('budget')
+      .insert([{
+        user_id: userId,
+        payperiod_start: new Date().toISOString(),
+        payperiod_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+        budgetlimit: 0,
+        budgetbalance: 0,
+        setaside: 0,
+        savingsgoal: 0
+      }])
+      .select('payperiod_id')
+      .single();
+
+    if (createError) throw createError;
+    return newPayPeriod.payperiod_id;
+  }
+};
+
 export const PurchaseHistoryService = {
-    // Create a new purchase record
-    async createPurchase(
-      user_id: string,
-      payperiod_id: string,
-      purchasedate: string,
-      expense: number,
-      description: string
-    ) {
+  // Create a new purchase record
+  async createPurchase(
+    user_id: string,
+    payperiod_id: string,
+    purchasedate: string,
+    expense: number,
+    description: string
+  ) {
+    const { data, error } = await supabase
+      .from('purchase_history')
+      .insert([
+        {
+          user_id,
+          payperiod_id,
+          purchasedate,
+          expense,
+          description,
+        },
+      ])
+      .select();
+
+    if (error) {
+      console.error('Error creating purchase:', error);
+      throw error;
+    }
+
+    return data?.[0];
+  },
+
+  // Get all purchases for a user
+  async getUserPurchases(user_id: string) {
       const { data, error } = await supabase
         .from('purchase_history')
-        .insert([
-          {
-            user_id,
-            payperiod_id,
-            purchasedate,
-            expense,
-            description,
-          },
-        ])
-        .select();
+        .select('*')
+        .eq('user_id', user_id)
+        .order('purchasedate', { ascending: false });  
   
       if (error) {
-        console.error('Error creating purchase:', error);
+        console.error('Error fetching purchases:', error);
         throw error;
       }
   
-      return data?.[0];
+      return data;
     },
+
+  // Update a purchase
+  async updatePurchase(
+    purchase_id: string,
+    updates: {
+      purchasedate?: string;
+      expense?: number;
+      description?: string;
+    }
+  ) {
+    const { data, error } = await supabase
+      .from('purchase_history')
+      .update(updates)
+      .eq('purchase_id', purchase_id)
+      .select();
+
+    if (error) {
+      console.error('Error updating purchase:', error);
+      throw error;
+    }
+
+    return data?.[0];
+  },
+
+  // Delete a purchase
+  async deletePurchase(purchase_id: string) {
+    const { error } = await supabase
+      .from('purchase_history')
+      .delete()
+      .eq('purchase_id', purchase_id);
+
+    if (error) {
+      console.error('Error deleting purchase:', error);
+      throw error;
+    }
+
+    return true;
+  },
+  async getUserPurchasesByDateRange(
+    user_id: string,
+    startDate: string,
+    endDate: string
+  ) {
+    const { data, error } = await supabase
+      .from('purchase_history')
+      .select('*')
+      .eq('user_id', user_id)
+      .gte('purchasedate', startDate)
+      .lte('purchasedate', endDate)
+      .order('purchasedate', { ascending: false });
   
-    // Get all purchases for a user
-    async getUserPurchases(user_id: string) {
-        const { data, error } = await supabase
-          .from('purchase_history')
-          .select('*')
-          .eq('user_id', user_id)
-          .order('purchasedate', { ascending: false });  
-    
-        if (error) {
-          console.error('Error fetching purchases:', error);
-          throw error;
-        }
-    
-        return data;
-      },
+    if (error) {
+      console.error('Error fetching purchases:', error);
+      throw error;
+    }
   
-    // Update a purchase
-    async updatePurchase(
-      purchase_id: string,
-      updates: {
-        purchasedate?: string;
-        expense?: number;
-        description?: string;
-      }
-    ) {
-      const { data, error } = await supabase
-        .from('purchase_history')
-        .update(updates)
-        .eq('purchase_id', purchase_id)
-        .select();
-  
-      if (error) {
-        console.error('Error updating purchase:', error);
-        throw error;
-      }
-  
-      return data?.[0];
-    },
-  
-    // Delete a purchase
-    async deletePurchase(purchase_id: string) {
-      const { error } = await supabase
-        .from('purchase_history')
-        .delete()
-        .eq('purchase_id', purchase_id);
-  
-      if (error) {
-        console.error('Error deleting purchase:', error);
-        throw error;
-      }
-  
-      return true;
-    },
-  };
+    return data;
+  },
+};
   
 
   // Auth Operations
