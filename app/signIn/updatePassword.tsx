@@ -7,8 +7,16 @@ export default function UpdatePassword() {
   const router = useRouter();
   const [password, setPassword] = useState('');
 
+  function isValidPassword(password: string): boolean {
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[a-zA-Z\d@$!%*?&]{6,}$/;
+    if (!passwordRegex.test(password)) {
+        return false;
+    }
+    return true;
+}
+
   const handleUpdatePassword = async () => {
-    if (!password || password.length < 6) {
+    if (!isValidPassword(password)) {
       alert('Password must be at least 6 characters long, includes an uppercase letter, one lowercase letter, one number, and one special character.');
       return;
     }
