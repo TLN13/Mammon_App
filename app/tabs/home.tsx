@@ -51,40 +51,48 @@ export default function HomeScreen() {
       console.warn('Empty date input');
       return 'No date';
     }
-
+  
+    let date: Date;
+  
     if (typeof dateInput === 'string') {
-      let date = new Date(dateInput);
-      if (!isNaN(date.getTime())) {
-        return date.toLocaleDateString('en-US', { 
-          month: 'short', 
-          day: 'numeric',
-          year: 'numeric'
-        });
+      if (dateInput.includes('T')) {
+        date = new Date(dateInput.endsWith('Z') ? dateInput : dateInput + 'Z');
+      } 
+      else if (dateInput.includes('/')) {
+        const parts = dateInput.split('/');
+        const month = parseInt(parts[0], 10);
+        const day = parseInt(parts[1], 10);
+        const year = parseInt(parts[2], 10);
+        date = new Date(Date.UTC(year, month - 1, day));
       }
-
-      if (dateInput.includes('/')) {
-        const [month, day, year] = dateInput.split('/');
-        date = new Date(`${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
-        if (!isNaN(date.getTime())) {
-          return date.toLocaleDateString('en-US', { 
-            month: 'short', 
-            day: 'numeric',
-            year: 'numeric'
-          });
-        }
+      // Try to parse as is
+      else {
+        date = new Date(dateInput);
       }
+    } 
+    // If it's already a Date object
+    else if (dateInput instanceof Date) {
+      date = dateInput;
+    } 
+    // Unrecognized format
+    else {
+      console.warn('Unrecognized date format:', dateInput);
+      return 'Invalid date';
     }
-    
-    if (dateInput instanceof Date && !isNaN(dateInput.getTime())) {
-      return dateInput.toLocaleDateString('en-US', { 
-        month: 'short', 
-        day: 'numeric',
-        year: 'numeric'
-      });
+  
+    // Check if date is valid
+    if (isNaN(date.getTime())) {
+      console.warn('Invalid date:', dateInput);
+      return 'Invalid date';
     }
-
-    console.warn('Unrecognized date format:', dateInput);
-    return 'Invalid date';
+  
+    // Format without timezone conversion
+    return date.toLocaleDateString('en-US', { 
+      timeZone: 'UTC', // Important: treat as UTC to prevent shifting
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    });
   };
 
   const handlePurchasePress = () => {
