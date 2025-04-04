@@ -96,7 +96,7 @@ export default function HomeScreen() {
   };
 
   const handlePurchasePress = () => {
-    router.push('./budget');
+    router.push('../budget/purchase_history');
   };
 
   const budgetAmount = 0;
