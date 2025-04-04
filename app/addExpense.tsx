@@ -1,16 +1,8 @@
 import { useState, useEffect } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  TouchableOpacity, 
-  TextInput, 
-  ScrollView, 
-  Alert 
-} from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, TextInput, ScrollView, Alert } from 'react-native';
 import { useFonts } from 'expo-font';
 import { useRouter } from 'expo-router';
-import { PurchaseHistoryService, AuthService, PayPeriodService } from '../lib/supabase_crud';
+import { PurchaseHistoryService, PayPeriodService } from '../lib/supabase_crud';
 import { supabase } from '../lib/supabase';
 
 export default function AddExpenseScreen() {

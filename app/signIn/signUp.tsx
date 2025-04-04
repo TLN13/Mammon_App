@@ -3,6 +3,7 @@ import { useFonts } from 'expo-font';
 import { useState } from 'react';
 import {useRouter} from 'expo-router';
 import { AuthService } from '../../lib/supabase_crud';
+import Ionicons from '@expo/vector-icons/Ionicons';
 
 export default function SignUp() {
     const router = useRouter();
@@ -78,7 +79,7 @@ async function handleSignUp(fName: string, lName: string, email: string, passwor
 return (
     <View style={styles.container}>
         <TouchableOpacity style={styles.backButton} onPress={router.back}>
-            <Text style={styles.back} >Back</Text>
+            <Ionicons name="arrow-back" size={24} color="#8BB04F" />
         </TouchableOpacity>
             <View style={styles.headerContainer}>
             
@@ -194,7 +195,6 @@ const styles = StyleSheet.create({
       backButton: {
         padding: 5,
         borderRadius: 5,
-        backgroundColor: '#8BB04F',
         position: 'absolute',
         top: 60,
         left: 10,
