@@ -1,5 +1,5 @@
 import { Calendar } from 'react-native-calendars';
-import { format, startOfWeek, addDays, addWeeks } from 'date-fns';
+import { format, startOfWeek, addDays, addWeeks, parseISO, subMonths, subDays } from 'date-fns';
 import { MaterialIcons } from '@expo/vector-icons';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useFonts } from 'expo-font';
@@ -8,6 +8,7 @@ import { PurchaseHistoryService, AuthService, UserService } from '../../lib/supa
 import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
 import RNPickerSelect from 'react-native-picker-select';
 import { Dimensions } from 'react-native';
+
 
 type MarkedDatesType = Record<string, { marked: boolean; dotColor: string }>;
 
@@ -27,13 +28,103 @@ export default function OverviewScreen() {
   const [weekDailyTotals, setWeekDailyTotals] = useState<Record<string, number>>({});
   const [chartType, setChartType] = useState('pie'); // Default to pie chart
   const [timeRange, setTimeRange] = useState('month'); // Default to month
-  const [chartData, setChartData] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [chartData, setChartData] = useState<(PieChartData | number)[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
 
   let [fontsLoaded] = useFonts({
     'Afacad-Regular': require('../../assets/fonts/Afacad-Regular.ttf'),
     'Megrim-Regular': require('../../assets/fonts/Megrim-Regular.ttf'),
   });
+
+  interface Purchase {
+    purchasedate: string;
+    expense: number;
+    description: string;
+  }
+  
+  interface DailyTotals {
+    [formattedDate: string]: number;
+  }
+
+  interface PieChartData {
+    name: string;
+    population: number;
+    color: string;
+    legendFontColor: string;
+    legendFontSize: number;
+  }
+  
+  interface LineBarChartData {
+    values: number[];
+    labels: string[];
+  }
+
+  function generateLineChartData(monthlyPurchases: Purchase[]) {
+    // Assume currentMonth is in format "YYYY-MM"
+    const [yearStr, monthStr] = monthlyPurchases.length > 0 
+      ? monthlyPurchases[0].purchasedate.split('-') 
+      : [new Date().getFullYear().toString(), (new Date().getMonth() + 1).toString()];
+    const year = parseInt(yearStr);
+    const month = parseInt(monthStr);
+    // Get number of days in month
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const labels: string[] = [];
+    const data: number[] = [];
+    // Pre-compute daily totals (formatted as MM/dd/yyyy)
+    const dailyTotals: DailyTotals = {};
+    monthlyPurchases.forEach((p) => {
+      // Convert purchasedate (ISO) to local date and format as MM/dd/yyyy
+      const formatted = format(parseISO(p.purchasedate), 'MM/dd/yyyy');
+      dailyTotals[formatted] = (dailyTotals[formatted] || 0) + p.expense;
+    });
+    // For each day in the month, fill in data (0 if no purchase)
+    for (let d = 1; d <= daysInMonth; d++) {
+      // Create date object
+      const dateObj = new Date(year, month - 1, d);
+      const formatted = format(dateObj, 'MM/dd/yyyy');
+      labels.push(format(dateObj, 'd')); // Use day number as label, or full date if desired
+      data.push(dailyTotals[formatted] || 0);
+    }
+    return { labels, data };
+  }
+
+  function generatePieChartData(monthlyPurchases: Purchase[]) {
+    // Group purchases by category extracted from description.
+    const categoryTotals: Record<string, number> = {};
+    monthlyPurchases.forEach((p) => {
+      // Example description: "Coffee (Personal)". Extract the text inside parentheses.
+      const match = p.description.match(/\(([^)]+)\)/);
+      const category = match ? match[1] : 'Other';
+      categoryTotals[category] = (categoryTotals[category] || 0) + p.expense;
+    });
+    // Prepare pie chart data – adjust fields as required by your PieChart component.
+    const data = Object.keys(categoryTotals).map((cat, index) => ({
+      name: cat,
+      population: categoryTotals[cat],
+      color: `rgba(139, 176, 79, ${0.5 + index * 0.1})`,
+      legendFontColor: '#8BB04F',
+      legendFontSize: 12,
+    }));
+    return data;
+  }
+
+  function generateBarChartData(monthlyPurchases: Purchase[]) {
+    // Split the month into 4 weeks. We use the day of the month to assign weeks:
+    // Week 1: 1-7, Week 2: 8-14, Week 3: 15-21, Week 4: 22-end.
+    const weekSums = [0, 0, 0, 0];
+    // Pre-compute daily totals as before.
+    const dailyTotals: DailyTotals = {};
+    monthlyPurchases.forEach((p) => {
+      const formatted = format(parseISO(p.purchasedate), 'MM/dd/yyyy');
+      // Convert the formatted date back to day of month:
+      const day = parseInt(formatted.split('/')[1]);
+      let weekIndex = Math.floor((day - 1) / 7);
+      if (weekIndex > 3) weekIndex = 3;
+      weekSums[weekIndex] += p.expense;
+    });
+    const labels = ['Week 1', 'Week 2', 'Week 3', 'Week 4'];
+    return { labels, data: weekSums };
+  }
 
   // Navigation for week view
   const handleWeekNavigation = (direction: 'previous' | 'next') => {
@@ -55,46 +146,64 @@ export default function OverviewScreen() {
         setLoading(true);
         const user = await AuthService.getCurrentUser();
         if (!user) return;
-
+  
         if (isMonth) {
-          // For month view, fetch all purchases (assumed to be in ISO format, e.g., "2023-05-12")
+          // Fetch all purchases for the user (assumed to be in ISO format, e.g., "2023-05-12")
           const purchases = await PurchaseHistoryService.getUserPurchases(user.id);
-          // For the calendar, use the ISO date format (YYYY-MM-DD)
+          // Format dates for the calendar using ISO (YYYY-MM-DD)
           const formattedDates: MarkedDatesType = {};
           let monthTotal = 0;
           purchases.forEach((purchase) => {
-            const dateISO = purchase.purchasedate; // from CRUD, ensure this is in YYYY-MM-DD
+            const dateISO = purchase.purchasedate; // ensure in YYYY-MM-DD format
             formattedDates[dateISO] = { marked: true, dotColor: '#FFBB00' };
             monthTotal += purchase.expense;
           });
           setMarkedDates(formattedDates);
           setTotalSpent(monthTotal);
           // Calculate monthly average as total divided by number of days in current month.
-          const [year, month] = currentMonth.split('/');
+          // NOTE: Adjust currentMonth split: if your currentMonth is "YYYY-MM", use split('-').
+          const [year, month] = currentMonth.split('-');
           const daysInMonth = new Date(parseInt(year), parseInt(month), 0).getDate();
           setMonthlyAverage(monthTotal / daysInMonth);
-
+  
           // Fetch user budget and calculate progress.
           const profile = await UserService.getUserProfile(user.id);
           const userBudget = profile?.budget || 0;
           setBudget(userBudget);
           const progress = userBudget > 0 ? Math.min((monthTotal / userBudget) * 100, 100) : 0;
           setProgressPercentage(progress);
+  
+          // --- Begin Chart Data Generation for Month ---
+          // Filter purchases to the current month (assuming purchasedate is in ISO "YYYY-MM-DD")
+          const currentMonthPrefix = currentMonth; // e.g., "2023-05"
+          const monthlyPurchases = purchases.filter((p) =>
+            p.purchasedate.startsWith(currentMonthPrefix)
+          );
+  
+          // Generate line chart data spanning all days of the month.
+          const { labels: lineLabels, data: lineData } = generateLineChartData(monthlyPurchases);
+          // Generate pie chart data based on expense category (extracted from description).
+          const pieData = generatePieChartData(monthlyPurchases);
+          // Generate bar chart data (split into 4 weeks).
+          const { labels: barLabels, data: barData } = generateBarChartData(monthlyPurchases);
+  
+          
+          // --- End Chart Data Generation for Month ---
         } else if (isWeek) {
-          // For week view, determine the week boundaries.
+          // For week view, determine the week boundaries in MM/dd/yyyy.
           const weekStart = format(currentWeekStart, 'MM/dd/yyyy');
           const weekEnd = format(addDays(currentWeekStart, 6), 'MM/dd/yyyy');
-          // Use a CRUD method to fetch purchases by date range.
+          // Fetch purchases by date range.
           const purchases = await PurchaseHistoryService.getUserPurchasesByDateRange(
             user.id,
             weekStart,
             weekEnd
           );
-          // Build daily totals using the desired format (MM/dd/yyyy).
+          // Build daily totals using MM/dd/yyyy format.
           const dailyTotals: Record<string, number> = {};
           let weekTotal = 0;
           purchases.forEach((purchase) => {
-            // Convert purchase date to a Date and reformat it.
+            // Convert purchase date to a Date and reformat.
             const purchaseDate = new Date(purchase.purchasedate);
             const formattedDate = format(purchaseDate, 'MM/dd/yyyy');
             dailyTotals[formattedDate] = (dailyTotals[formattedDate] || 0) + purchase.expense;
@@ -103,7 +212,7 @@ export default function OverviewScreen() {
           setWeekDailyTotals(dailyTotals);
           // Compute weekly average as total for the week divided by 7.
           setWeeklyAverage(weekTotal / 7);
-          // For week view, you might also want to update totalSpent if desired.
+          // Update totalSpent if needed.
           setTotalSpent(weekTotal);
         }
       } catch (error) {
@@ -112,9 +221,75 @@ export default function OverviewScreen() {
         setLoading(false);
       }
     };
-
+  
     fetchData();
   }, [currentMonth, currentWeekStart, isMonth, isWeek]);
+
+  useEffect(() => {
+    const fetchChartData = async () => {
+      try {
+        const user = await AuthService.getCurrentUser();
+        if (!user || !isChart) return;
+  
+        const today = new Date();
+        const oneYearAgo = subDays(today, 365);
+        const startDate = format(oneYearAgo, 'yyyy-MM-dd');
+        const endDate = format(today, 'yyyy-MM-dd');
+  
+        const purchases = await PurchaseHistoryService.getUserPurchasesByDateRange(
+          user.id,
+          startDate,
+          endDate
+        );
+  
+        // Process categories for pie/bar charts
+        const categoryMap = new Map<string, number>();
+        const monthlyTotals = new Map<string, number>();
+        
+        purchases.forEach(p => {
+          // Category extraction
+          const match = p.description.match(/\(([^)]+)\)/);
+          const category = match?.[1]?.trim() || 'Other';
+          categoryMap.set(category, (categoryMap.get(category) || 0) + p.expense);
+  
+          // Monthly aggregation for line chart
+          const monthKey = format(new Date(p.purchasedate), 'MMM yyyy');
+          monthlyTotals.set(monthKey, (monthlyTotals.get(monthKey) || 0) + p.expense);
+        });
+  
+        // Line Chart Data (Monthly)
+        const months = Array.from({ length: 12 }, (_, i) => 
+          format(subMonths(today, 11 - i), 'MMM yyyy')
+        );
+        const lineData = months.map(month => monthlyTotals.get(month) || 0);
+  
+        // Pie/Bar Chart Data (Yearly categories)
+        const categories = Array.from(categoryMap.keys());
+        const categoryValues = Array.from(categoryMap.values());
+  
+        if (chartType === 'pie') {
+          const pieData = categories.map((category, index) => ({
+            name: category,
+            population: categoryMap.get(category) || 0,
+            color: `rgba(139, 176, 79, ${0.5 + index * 0.1})`,
+            legendFontColor: '#8BB04F',
+            legendFontSize: 12
+          }));
+          setChartData(pieData);
+        } else {
+          setChartData(chartType === 'line' ? lineData : categoryValues);
+          setCategories(chartType === 'line' ? months : categories);
+        }
+  
+      } catch (error) {
+        console.error('Error fetching chart data:', error);
+      }
+    };
+  
+    if (isChart) fetchChartData();
+  }, [isChart, chartType]);
+  
+  
 
   if (!fontsLoaded) return <View />;
 
@@ -246,114 +421,88 @@ export default function OverviewScreen() {
           </View>
         )}
 
-        {isChart && (
-          <View style={styles.chartView}>
-            <RNPickerSelect
-              onValueChange={(value) => setChartType(value)}
-              items={[
-                { label: 'Pie Chart', value: 'pie' },
-                { label: 'Bar Chart', value: 'bar' },
-                { label: 'Line Chart', value: 'line' },
-              ]}
-              style={{
-                inputIOS: {
-                  color: '#8BB04F',
-                  paddingVertical: 12,
-                  paddingHorizontal: 10,
-                  borderWidth: 1,
-                  borderColor: '#980058',
-                  borderRadius: 4,
-                  backgroundColor: '#230A15',
-                },
-              }}
-            />
-            <Text style={styles.weekTitle}>Chart Type: {chartType}</Text>
-            {chartType === 'line' && (
-              <LineChart
-                data={{
-                  labels: categories,
-                  datasets: [
-                    {
-                      data: chartData,
-                    },
-                  ],
-                }}
-                width={Dimensions.get('window').width - 40} // Adjust width
-                height={220}
-                yAxisLabel="$"
-                chartConfig={{
-                  backgroundColor: '#230A15',
-                  backgroundGradientFrom: '#230A15',
-                  backgroundGradientTo: '#230A15',
-                  decimalPlaces: 2,
-                  color: (opacity = 1) => `rgba(139, 176, 79, ${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(255, 187, 0, ${opacity})`,
-                  style: {
-                    borderRadius: 16,
-                  },
-                }}
-                style={{
-                  marginVertical: 8,
-                  borderRadius: 16,
-                }}
-              />
-            )}
 
-            {chartType === 'bar' && (
-              <BarChart
-                data={{
-                  labels: categories,
-                  datasets: [
-                    {
-                      data: chartData,
-                    },
-                  ],
-                }}
-                width={Dimensions.get('window').width - 40} // Adjust width
-                height={220}
-                yAxisLabel="$"
-                yAxisSuffix="" // Add an empty suffix or customize as needed
-                chartConfig={{
-                  backgroundColor: '#230A15',
-                  backgroundGradientFrom: '#230A15',
-                  backgroundGradientTo: '#230A15',
-                  decimalPlaces: 2,
-                  color: (opacity = 1) => `rgba(139, 176, 79, ${opacity})`,
-                  labelColor: (opacity = 1) => `rgba(255, 187, 0, ${opacity})`,
-                  style: {
-                    borderRadius: 16,
-                  },
-                }}
-                style={{
-                  marginVertical: 8,
-                  borderRadius: 16,
-                }}
-              />
-            )}
+{isChart && (
+  <View style={styles.chartView}>
+    <RNPickerSelect
+      onValueChange={setChartType}
+      value={chartType}
+      items={[
+        { label: 'Pie Chart', value: 'pie' },
+        { label: 'Bar Chart', value: 'bar' },
+        { label: 'Line Chart', value: 'line' },
+      ]}
+      style={styles.input}
+    />
 
-            {chartType === 'pie' && (
-              <PieChart
-                data={categories.map((category, index) => ({
-                  name: category,
-                  population: chartData[index],
-                  color: `rgba(139, 176, 79, ${0.5 + index * 0.1})`,
-                  legendFontColor: '#8BB04F',
-                  legendFontSize: 12,
-                }))}
-                width={Dimensions.get('window').width - 40} // Adjust width
-                height={220}
-                chartConfig={{
-                  color: (opacity = 1) => `rgba(139, 176, 79, ${opacity})`,
-                }}
-                accessor="population"
-                backgroundColor="transparent"
-                paddingLeft="15"
-                absolute
-              />
-            )}
-          </View>
-        )}
-      </View>
+    {chartType === 'line' && (
+      <LineChart
+        data={{
+          labels: categories,
+          datasets: [{ data: chartData }]
+        }}
+        width={Dimensions.get('window').width - 40}
+        height={220}
+        yAxisLabel="$"
+        yAxisSuffix=""
+        chartConfig={{
+          backgroundColor: '#230A15',
+          backgroundGradientFrom: '#230A15',
+          backgroundGradientTo: '#230A15',
+          decimalPlaces: 0,
+          color: () => '#8BB04F',
+          labelColor: () => '#FFBB00',
+          propsForDots: {
+            r: '4',
+            strokeWidth: '2',
+            stroke: '#FFBB00'
+          }
+        }}
+        bezier
+        style={styles.chart}
+      />
+    )}
+
+    {chartType === 'bar' && (
+      <BarChart
+        data={{
+          labels: categories,
+          datasets: [{ data: chartData }]
+        }}
+        width={Dimensions.get('window').width - 40}
+        height={220}
+        yAxisLabel="$"
+        chartConfig={{
+          backgroundColor: '#230A15',
+          backgroundGradientFrom: '#230A15',
+          backgroundGradientTo: '#230A15',
+          color: () => '#8BB04F',
+          labelColor: () => '#FFBB00'
+        }}
+        style={styles.chart}
+      />
+    )}
+
+    {chartType === 'pie' && (
+      <PieChart
+        data={chartData}
+        width={Dimensions.get('window').width - 40}
+        height={220}
+        accessor="population"
+        backgroundColor="transparent"
+        paddingLeft="15"
+        absolute
+        chartConfig={{
+          color: () => '#8BB04F'
+        }}
+        style={styles.chart}
+      />
+    )}
+  </View>
+)}
+
+
+</View>
     </View>
   );
 }
@@ -485,8 +634,23 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  chartView:{
-
+  chart: {
+    marginVertical: 8,
+    borderRadius: 16,
+  },
+  chartView: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  input: {
+    color: '#8BB04F',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: '#980058',
+    borderRadius: 4,
+    backgroundColor: '#230A15',
+    marginBottom: 10,
   },
 });
 
