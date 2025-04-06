@@ -18,23 +18,44 @@ export default function HomeScreen() {
     'Megrim-Regular': require('../../assets/fonts/Megrim-Regular.ttf'),
   });
   const [recentPurchases, setRecentPurchases] = useState<any[]>([]);
+  const [budgetBalance, setBudgetBalance] = useState<number>(0);
 
-  useEffect(() => {
-    const fetchRecentPurchases = async () => {
-      try {
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (error) throw error;
-        if (user) {
-          const purchases = await PurchaseHistoryService.getUserPurchases(user.id);
-          setRecentPurchases(purchases.slice(0, 3));
-        }
-      } catch (error) {
-        console.error('Error fetching purchases:', error);
+  const fetchRecentPurchases = async () => {
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error) throw error;
+      if (user) {
+        const purchases = await PurchaseHistoryService.getUserPurchases(user.id);
+        setRecentPurchases(purchases.slice(0, 3));
       }
-    };
-    
-    fetchRecentPurchases();
-  }, []);
+    } catch (error) {
+      console.error('Error fetching purchases:', error);
+    }
+  };
+
+  const fetchBudgetBalance = async () => {
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      if (authError) throw authError;
+      
+      if (user) {
+        const { data, error } = await supabase
+          .from('budget')
+          .select('budgetbalance')
+          .eq('user_id', user.id)
+          .order('payperiod_start', { ascending: false })
+          .limit(1);
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          setBudgetBalance(data[0].budgetbalance);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching budget balance:', error);
+    }
+  };
 
   const handleSignOut = async () => {
     try {
@@ -93,13 +114,22 @@ export default function HomeScreen() {
       day: 'numeric',
       year: 'numeric'
     });
+
   };
+  useEffect(() => {
+    const fetchData = async () => {
+      await Promise.all([
+        fetchBudgetBalance(),
+        fetchRecentPurchases()
+      ]);
+    };
+    
+    fetchData();
+  }, []);
 
   const handlePurchasePress = () => {
     router.push('../budget/purchase_history');
   };
-
-  const budgetAmount = 0;
   
   return (
     <View style={styles.container}>
@@ -109,7 +139,7 @@ export default function HomeScreen() {
       
       <View style={styles.budgetContainer}>
         <Text style={styles.budgetText}>Remaining Budget:</Text>
-        <Text style={styles.budgetAmount}>${budgetAmount}</Text>
+        <Text style={styles.budgetAmount}>${budgetBalance.toFixed(2)}</Text>
       </View>
       
       <ScrollView style={styles.purchaseScrollContainer}>
