@@ -1,68 +1,62 @@
-import { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { useFonts } from 'expo-font';
 import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { PayPeriodService } from '../../lib/supabase_crud';
 
-export default function EditBudgetScreen() {
+export default function NewBudgetScreen() {
   const router = useRouter();
+
+  // Load custom fonts
   const [fontsLoaded] = useFonts({
     'Afacad-Regular': require('../../assets/fonts/Afacad-Regular.ttf'),
     'Afacad-Bold': require('../../assets/fonts/Afacad-Bold.ttf'),
   });
 
-  const [loading, setLoading] = useState(true);
-  const [budgetId, setBudgetId] = useState<string | null>(null);
+  // Form state
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [budgetlimit, setBudgetlimit] = useState('');
   const [savingsgoal, setSavingsgoal] = useState('');
   const [setaside, setSetaside] = useState('');
 
   const [errors, setErrors] = useState({
+    dates: '',
     budgetlimit: '',
     savingsgoal: '',
     setaside: '',
   });
 
-  useEffect(() => {
-    const fetchCurrentBudget = async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
+  // Check MM/DD/YYYY format
+  const isValidDateFormat = (date: string) => /^\d{2}\/\d{2}\/\d{4}$/.test(date);
 
-        const today = new Date().toISOString();
-
-        const { data: budget, error } = await supabase
-          .from('budget')
-          .select('*')
-          .eq('user_id', user.id)
-          .lte('payperiod_start', today)
-          .gte('payperiod_end', today)
-          .single();
-
-        if (error) throw error;
-
-        setBudgetId(budget.payperiod_id);
-        setBudgetlimit(budget.budgetlimit.toString());
-        setSavingsgoal(budget.savingsgoal.toString());
-        setSetaside(budget.setaside.toString());
-      } catch (error) {
-        console.error('Failed to fetch budget:', error);
-        Alert.alert('Error', 'Could not load current budget.');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCurrentBudget();
-  }, []);
+  // Convert date string to ISO (YYYY-MM-DD)
+  const parseDate = (input: string) => {
+    const [month, day, year] = input.split('/');
+    return new Date(`${year}-${month}-${day}`);
+  };
 
   const validateInputs = () => {
     let isValid = true;
+    const newErrors = { dates: '', budgetlimit: '', savingsgoal: '', setaside: '' };
+
+    // Date validation
+    if (!isValidDateFormat(startDate) || !isValidDateFormat(endDate)) {
+      newErrors.dates = 'Dates must be in MM/DD/YYYY format.';
+      isValid = false;
+    } else {
+      const start = parseDate(startDate);
+      const end = parseDate(endDate);
+      if (start >= end) {
+        newErrors.dates = 'Start date must be before end date.';
+        isValid = false;
+      }
+    }
+
+    // Numeric validation
     const numLimit = parseFloat(budgetlimit);
     const numGoal = parseFloat(savingsgoal);
     const numSetaside = parseFloat(setaside);
-    const newErrors = { budgetlimit: '', savingsgoal: '', setaside: '' };
 
     if (isNaN(numLimit) || numLimit <= 0) {
       newErrors.budgetlimit = 'Budget must be greater than 0';
@@ -83,44 +77,112 @@ export default function EditBudgetScreen() {
     return isValid;
   };
 
-  const handleUpdate = async () => {
-    if (!budgetId) return;
+  // Submit budget to Supabase
+  const handleSubmit = async () => {
     if (!validateInputs()) return;
 
     try {
-      await PayPeriodService.updateBudget(budgetId, {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not found');
+
+      const payperiod_start = parseDate(startDate).toISOString();
+      const payperiod_end = parseDate(endDate).toISOString();
+
+      const { error } = await supabase.from('budget').insert([{
+        user_id: user.id,
+        payperiod_start,
+        payperiod_end,
         budgetlimit: parseFloat(budgetlimit),
         savingsgoal: parseFloat(savingsgoal),
         setaside: parseFloat(setaside),
-      });
+        budgetbalance: 0,
+      }]);
 
-      Alert.alert('Success', 'Budget updated.');
+      if (error) throw error;
+
+      Alert.alert('Success', 'New budget created.');
       router.push('/tabs/budget');
-    } catch (error) {
-      console.error('Update error:', error);
-      Alert.alert('Error', 'Failed to update budget.');
+    } catch (err) {
+      console.error(err);
+      Alert.alert('Error', 'Failed to create budget.');
     }
   };
 
-  if (!fontsLoaded || loading) {
-    return (
-      <View style={styles.container}>
-        <ActivityIndicator size="large" color="#8BB04F" />
-      </View>
-    );
-  }
+  if (!fontsLoaded) return null;
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Edit Current Budget</Text>
+      <Text style={styles.title}>Create New Budget</Text>
 
-      {/* Input Fields */}
-      {/* ... same as before ... */}
+      {/* Start Date */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Pay Period Start (MM/DD/YYYY)</Text>
+        <TextInput
+          style={styles.input}
+          value={startDate}
+          onChangeText={setStartDate}
+          placeholder="MM/DD/YYYY"
+          keyboardType="numbers-and-punctuation"
+          placeholderTextColor="#888"
+        />
+      </View>
 
-      <TouchableOpacity style={styles.button} onPress={handleUpdate}>
-        <Text style={styles.buttonText}>Save Changes</Text>
+      {/* End Date */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Pay Period End (MM/DD/YYYY)</Text>
+        <TextInput
+          style={styles.input}
+          value={endDate}
+          onChangeText={setEndDate}
+          placeholder="MM/DD/YYYY"
+          keyboardType="numbers-and-punctuation"
+          placeholderTextColor="#888"
+        />
+        {errors.dates ? <Text style={styles.error}>{errors.dates}</Text> : null}
+      </View>
+
+      {/* Budget Limit */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Budget Limit</Text>
+        <TextInput
+          style={styles.input}
+          keyboardType="numeric"
+          value={budgetlimit}
+          onChangeText={setBudgetlimit}
+        />
+        {errors.budgetlimit ? <Text style={styles.error}>{errors.budgetlimit}</Text> : null}
+      </View>
+
+      {/* Savings Goal */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Savings Goal</Text>
+        <TextInput
+          style={styles.input}
+          keyboardType="numeric"
+          value={savingsgoal}
+          onChangeText={setSavingsgoal}
+        />
+        {errors.savingsgoal ? <Text style={styles.error}>{errors.savingsgoal}</Text> : null}
+      </View>
+
+      {/* Set Aside */}
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Set Aside</Text>
+        <TextInput
+          style={styles.input}
+          keyboardType="numeric"
+          value={setaside}
+          onChangeText={setSetaside}
+        />
+        {errors.setaside ? <Text style={styles.error}>{errors.setaside}</Text> : null}
+      </View>
+
+      {/* Save Button */}
+      <TouchableOpacity style={styles.button} onPress={handleSubmit}>
+        <Text style={styles.buttonText}>Save Budget</Text>
       </TouchableOpacity>
 
+      {/* Cancel */}
       <TouchableOpacity style={styles.cancelButton} onPress={() => router.push('/tabs/budget')}>
         <Text style={styles.cancelText}>Cancel</Text>
       </TouchableOpacity>
@@ -128,6 +190,7 @@ export default function EditBudgetScreen() {
   );
 }
 
+// Styling
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -161,19 +224,16 @@ const styles = StyleSheet.create({
   },
   error: {
     color: '#FF0000',
-    marginTop: 4,
     fontSize: 14,
     fontFamily: 'Afacad-Regular',
+    marginTop: 4,
   },
   button: {
     backgroundColor: '#8BB04F',
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
-    marginTop: 10,
-  },
-  disabledButton: {
-    opacity: 0.6,
+    marginTop: 20,
   },
   buttonText: {
     color: '#290A15',
