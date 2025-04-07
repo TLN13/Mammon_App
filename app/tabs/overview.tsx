@@ -6,7 +6,6 @@ import { useFonts } from 'expo-font';
 import { useEffect, useState } from 'react';
 import { PurchaseHistoryService, AuthService, UserService } from '../../lib/supabase_crud';
 import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
-import RNPickerSelect from 'react-native-picker-select';
 import { Dimensions } from 'react-native';
 
 
@@ -27,11 +26,9 @@ export default function OverviewScreen() {
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 })); // week starts on Monday
   const [weekDailyTotals, setWeekDailyTotals] = useState<Record<string, number>>({});
   const [chartType, setChartType] = useState<'pie' | 'bar' | 'line'>('pie');
-  const [timeRange, setTimeRange] = useState('month'); // Default to month
   const [pieChartData, setPieChartData] = useState<PieChartData[]>([]);
   const [barChartData, setBarChartData] = useState<{labels: string[], values: number[]}>({labels: [], values: []});
   const [lineChartData, setLineChartData] = useState<{labels: string[], values: number[]}>({labels: [], values: []});
-  const [categories, setCategories] = useState<string[]>([]);
 
   let [fontsLoaded] = useFonts({
     'Afacad-Regular': require('../../assets/fonts/Afacad-Regular.ttf'),
@@ -88,6 +85,10 @@ export default function OverviewScreen() {
       data.push(dailyTotals[formatted] || 0);
     }
     return { labels, data };
+  }
+
+  function toLocalDate(date: Date): Date {
+    return new Date(date.getTime() - date.getTimezoneOffset() * 60000);
   }
 
   function generatePieChartData(monthlyPurchases: Purchase[]) {
@@ -259,7 +260,7 @@ export default function OverviewScreen() {
         categoryMap.set(category, (categoryMap.get(category) || 0) + p.expense);
   
         // Monthly aggregation
-        const monthKey = format(new Date(p.purchasedate), 'MMM yyyy');
+        const monthKey = format(new Date(p.purchasedate), 'M');
         monthlyTotals.set(monthKey, (monthlyTotals.get(monthKey) || 0) + p.expense);
       });
   
@@ -280,7 +281,7 @@ export default function OverviewScreen() {
   
       // Line Chart Data (last 12 months)
       const months = Array.from({ length: 12 }, (_, i) => 
-        format(subMonths(today, 11 - i), 'MMM yyyy')
+        format(subMonths(today, 11 - i), 'M')
       );
       setLineChartData({
         labels: months,
@@ -362,25 +363,7 @@ export default function OverviewScreen() {
                 textDayHeaderFontFamily: 'Afacad-Regular',
               }}
             />
-            <View style={styles.info}>
-              <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Total Spent</Text>
-                <Text style={styles.infoValue}>${totalSpent.toFixed(2)}</Text>
-              </View>
-              <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Monthly Average</Text>
-                <Text style={styles.infoValue}>${monthlyAverage.toFixed(2)}</Text>
-              </View>
-              <View style={styles.infoItem}>
-                <Text style={styles.infoLabel}>Budget Progress</Text>
-                <View style={styles.progressBar}>
-                  <View style={[styles.progressFill, { width: `${progressPercentage}%` }]} />
-                </View>
-                <Text style={styles.infoValue}>
-                  ${totalSpent.toFixed(2)} / ${budget.toFixed(2)}
-                </Text>
-              </View>
-            </View>
+            
           </View>
         )}
 
@@ -391,7 +374,7 @@ export default function OverviewScreen() {
                 <MaterialIcons name="chevron-left" size={24} color="#8BB04F" />
               </TouchableOpacity>
               <Text style={styles.weekTitle}>
-                {format(currentWeekStart, 'MMM d, yyyy')} - {format(addDays(currentWeekStart, 6), 'MMM d, yyyy')}
+                {format(toLocalDate(currentWeekStart), 'MMM d, yyyy')} - {format(toLocalDate(addDays(currentWeekStart, 6)), 'MMM d, yyyy')}
               </Text>
               <TouchableOpacity onPress={() => handleWeekNavigation('next')}>
                 <MaterialIcons name="chevron-right" size={24} color="#8BB04F" />
@@ -406,48 +389,29 @@ export default function OverviewScreen() {
                   </View>
                 );
               })}
-              <View style={styles.info}>
-                <View style={styles.infoItem}>
-                  <Text style={styles.infoLabel}>Total Spent</Text>
-                  <Text style={styles.infoValue}>${totalSpent.toFixed(2)}</Text>
-                </View>
-                <View style={styles.infoItem}>
-                  <Text style={styles.infoLabel}>Weekly Average</Text>
-                  <Text style={styles.infoValue}>${weeklyAverage.toFixed(2)}</Text>
-                </View>
-                <View style={styles.infoItem}>
-                  <Text style={styles.infoLabel}>Budget Progress</Text>
-                  <View style={styles.progressBar}>
-                    <View style={[styles.progressFill, { width: `${progressPercentage}%` }]} />
-                  </View>
-                  <Text style={styles.infoValue}>
-                    ${totalSpent.toFixed(2)} / ${budget.toFixed(2)}
-                  </Text>
-                </View>
-              </View>
+              
           </View>
         )}
 
 
 {isChart && (
   <View style={styles.chartView}>
-    <RNPickerSelect
-      onValueChange={(value: 'pie' | 'bar' | 'line') => {
-        setChartType(value || 'pie');
+    
+
+    <TouchableOpacity
+      style={styles.inputAndroid}
+      onPress={() => {
+      setChartType((prev) => {
+        if (prev === 'pie') return 'bar';
+        if (prev === 'bar') return 'line';
+        return 'pie';
+      });
       }}
-      items={[
-        { label: 'Pie Chart', value: 'pie' },
-        { label: 'Bar Chart', value: 'bar' },
-        { label: 'Line Chart', value: 'line' },
-      ]}
-      value={chartType}
-      style={{
-        inputIOS: styles.input,
-        inputAndroid: styles.input,
-      }}
-      placeholder={{}}
-      useNativeAndroidPickerStyle={false}
-    />
+    >
+      <Text style={{ color: '#FFF', textAlign: 'center' }}>
+      {chartType === 'pie' ? 'Pie Chart' : chartType === 'bar' ? 'Bar Chart' : 'Line Chart'}
+      </Text>
+    </TouchableOpacity>
 
 
     {chartType === 'line' && (
@@ -515,18 +479,22 @@ export default function OverviewScreen() {
     )}
   </View>
 )}
-
-
-</View>
+      </View>
+      <View style={styles.info}>
+              <View style={styles.infoItem}>
+                <Text style={styles.infoLabel}>Total Spent</Text>
+                <Text style={styles.infoValue}>${totalSpent.toFixed(2)}</Text>
+              </View>
+              <View style={styles.infoItem}>
+                <Text style={styles.infoLabel}>Monthly Average</Text>
+                <Text style={styles.infoValue}>${monthlyAverage.toFixed(2)}</Text>
+              </View>
+            </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  purchaseScrollContainer: {
-    
-    paddingHorizontal: 20,
-  },
   container: {
     flex: 1,
     alignItems: 'center',
@@ -565,9 +533,10 @@ const styles = StyleSheet.create({
   },
   main: {
     width: '90%',
-    marginTop: 175,
+    marginTop: 100,
   },
   calendar: {
+    marginTop: 30,
     height: 375,
     borderColor: '#980058',
     borderWidth: 2,
@@ -612,8 +581,6 @@ const styles = StyleSheet.create({
   },
   weekView: {
     width: '100%',
-    marginTop: 20,
-    paddingBottom: 90,
   },
   weekNavigation: {
     padding: 10,
@@ -676,15 +643,15 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     backgroundColor: '#230A15',
     marginBottom: 10,
+
   },
   inputAndroid: {
     color: '#8BB04F',
     paddingVertical: 8,
     paddingHorizontal: 10,
     borderWidth: 1,
-    borderColor: '#980058',
+    backgroundColor: '#980058',
     borderRadius: 4,
-    backgroundColor: '#230A15',
     marginBottom: 10,
   },
 });
