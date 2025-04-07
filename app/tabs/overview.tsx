@@ -432,14 +432,17 @@ export default function OverviewScreen() {
         { label: 'Bar Chart', value: 'bar' },
         { label: 'Line Chart', value: 'line' },
       ]}
-      style={styles.input}
+      style={{
+        inputIOS: styles.input,
+        inputAndroid: styles.input,
+      }}
     />
 
     {chartType === 'line' && (
       <LineChart
         data={{
           labels: categories,
-          datasets: [{ data: chartData }]
+          datasets: [{ data: chartData.filter((item): item is number => typeof item === 'number') }]
         }}
         width={Dimensions.get('window').width - 40}
         height={220}
@@ -467,11 +470,12 @@ export default function OverviewScreen() {
       <BarChart
         data={{
           labels: categories,
-          datasets: [{ data: chartData }]
+          datasets: [{ data: chartData.filter((item): item is number => typeof item === 'number') }]
         }}
         width={Dimensions.get('window').width - 40}
         height={220}
         yAxisLabel="$"
+        yAxisSuffix="" // Add this line to fix the error
         chartConfig={{
           backgroundColor: '#230A15',
           backgroundGradientFrom: '#230A15',
