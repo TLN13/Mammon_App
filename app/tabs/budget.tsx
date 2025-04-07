@@ -141,6 +141,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#290A15',
+    paddingTop: 10,
   },
   scrollContent: {
     padding: 20,
