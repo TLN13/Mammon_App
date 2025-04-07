@@ -434,7 +434,7 @@ export default function OverviewScreen() {
             r: '4',
             strokeWidth: '2',
             stroke: '#FFBB00'
-          }
+          },
         }}
         bezier
         style={styles.chart}
@@ -456,7 +456,10 @@ export default function OverviewScreen() {
           backgroundGradientFrom: '#230A15',
           backgroundGradientTo: '#230A15',
           color: () => '#8BB04F',
-          labelColor: () => '#FFBB00'
+          labelColor: () => '#FFBB00',
+          propsForLabels: {
+            fontSize: 10, 
+          },
         }}
         style={styles.chart}
       />
