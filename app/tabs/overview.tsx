@@ -435,6 +435,7 @@ export default function OverviewScreen() {
             strokeWidth: '2',
             stroke: '#FFBB00'
           },
+          paddingTop: 500,
         }}
         bezier
         style={styles.chart}
@@ -447,8 +448,9 @@ export default function OverviewScreen() {
           labels: barChartData.labels,
           datasets: [{ data: barChartData.values }]
         }}
-        width={Dimensions.get('window').width - 40}
-        height={220}
+        width={Dimensions.get('window').width - 35}
+        height={240}
+        fromZero={true}
         yAxisLabel="$"
         yAxisSuffix="" 
         chartConfig={{
@@ -457,9 +459,12 @@ export default function OverviewScreen() {
           backgroundGradientTo: '#230A15',
           color: () => '#8BB04F',
           labelColor: () => '#FFBB00',
+          fillShadowGradient: '#8BB04F',
+          fillShadowGradientOpacity: 1, 
           propsForLabels: {
             fontSize: 10, 
           },
+          
         }}
         style={styles.chart}
       />
