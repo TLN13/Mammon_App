@@ -25,51 +25,66 @@ export default function BudgetScreen() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) return;
-
-        // Fetch all budgets for user and sort newest first
+    
+        const today = new Date();
+        today.setHours(0, 0, 0, 0); 
+    
         const { data: budgets, error } = await supabase
           .from('budget')
           .select('*')
           .eq('user_id', user.id)
           .order('payperiod_start', { ascending: false });
-
+    
         if (error) throw error;
+    
+        const current = budgets.find(b => {
+          const start = new Date(b.payperiod_start);
+          const end = new Date(b.payperiod_end);
+          start.setHours(0, 0, 0, 0);
+          end.setHours(23, 59, 59, 999); 
+          
+          console.log(`Checking budget ${b.payperiod_start} to ${b.payperiod_end}`);
+          console.log(`Date range: ${start.toISOString()} - ${end.toISOString()}`);
+          
+          return start <= today && today <= end;
+        });
+  
+        const previousBudgets = budgets.filter(b => {
+          const end = new Date(b.payperiod_end);
+          end.setHours(23, 59, 59, 999);
+          return end < today;
+        });
 
-        const today = new Date().toISOString();
-
-        // Determine current and previous budgets based on date
-        const current = budgets.find(b => b.payperiod_start <= today && b.payperiod_end >= today);
-        const previous = budgets.find(b => b.payperiod_end < today);
-
-        // Fetch and attach expenses to current budget
+        const previous = previousBudgets[0] || null;
+    
+        console.log('Final Current Budget:', current);
+        console.log('Final Previous Budget:', previous);
+ 
         if (current) {
           const currentExpenses = await getTotalExpenses(user.id, current.payperiod_start, current.payperiod_end);
           setCurrentBudget({ ...current, expenses: currentExpenses });
         }
-
-        // Fetch and attach expenses to previous budget
+    
         if (previous) {
           const previousExpenses = await getTotalExpenses(user.id, previous.payperiod_start, previous.payperiod_end);
           setPreviousBudget({ ...previous, expenses: previousExpenses });
         }
-
+    
       } catch (error) {
         console.error('Error loading budgets:', error);
       } finally {
-        setLoading(false); // Done loading, hide spinner
+        setLoading(false);
       }
     };
-
     loadBudgets();
   }, []);
+  
 
-  // Calculate total expenses for a user during a specific period
   const getTotalExpenses = async (userId: string, start: string, end: string) => {
     const purchases = await PurchaseHistoryService.getUserPurchasesByDateRange(userId, start, end);
     return purchases.reduce((total, p) => total + p.expense, 0);
   };
 
-  // Format dates like: "Apr 1, 2025 – Apr 30, 2025"
   const formatDateRange = (start: string, end: string) => {
     const startDate = new Date(start);
     const endDate = new Date(end);
