@@ -1,24 +1,24 @@
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useFonts } from 'expo-font';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 
-export default function NewBudgetScreen() {
+export default function EditBudgetScreen() {
   const router = useRouter();
-
-  // Load custom fonts
+  const { payperiod_id } = useLocalSearchParams();
+  
   const [fontsLoaded] = useFonts({
     'Afacad-Regular': require('../../assets/fonts/Afacad-Regular.ttf'),
     'Afacad-Bold': require('../../assets/fonts/Afacad-Bold.ttf'),
   });
 
-  // Form state
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [budgetlimit, setBudgetlimit] = useState('');
   const [savingsgoal, setSavingsgoal] = useState('');
   const [setaside, setSetaside] = useState('');
+  const [loading, setLoading] = useState(true);
 
   const [errors, setErrors] = useState({
     dates: '',
@@ -27,6 +27,46 @@ export default function NewBudgetScreen() {
     setaside: '',
   });
 
+  // Load existing budget data
+  useEffect(() => {
+    if (!fontsLoaded || !payperiod_id) return;
+
+    const loadBudget = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('budget')
+          .select('*')
+          .eq('payperiod_id', payperiod_id) 
+          .single();
+
+        if (error) throw error;
+        if (!data) throw new Error('Budget not found');
+
+        const formatDate = (isoDate: string) => {
+          const date = new Date(isoDate);
+          const month = String(date.getMonth() + 1).padStart(2, '0');
+          const day = String(date.getDate()).padStart(2, '0');
+          const year = date.getFullYear();
+          return `${month}/${day}/${year}`;
+        };
+
+        setStartDate(formatDate(data.payperiod_start));
+        setEndDate(formatDate(data.payperiod_end));
+        setBudgetlimit(String(data.budgetlimit));
+        setSavingsgoal(String(data.savingsgoal));
+        setSetaside(String(data.setaside));
+
+      } catch (err) {
+        console.error('Error loading budget:', err);
+        Alert.alert('Error', 'Failed to load budget data');
+        router.back();
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadBudget();
+  }, [fontsLoaded, payperiod_id]);
   // Check MM/DD/YYYY format
   const isValidDateFormat = (date: string) => /^\d{2}\/\d{2}\/\d{4}$/.test(date);
 
@@ -77,9 +117,9 @@ export default function NewBudgetScreen() {
     return isValid;
   };
 
-  // Submit budget to Supabase
   const handleSubmit = async () => {
     if (!validateInputs()) return;
+    if (!payperiod_id) return;
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -88,31 +128,38 @@ export default function NewBudgetScreen() {
       const payperiod_start = parseDate(startDate).toISOString();
       const payperiod_end = parseDate(endDate).toISOString();
 
-      const { error } = await supabase.from('budget').insert([{
-        user_id: user.id,
-        payperiod_start,
-        payperiod_end,
-        budgetlimit: parseFloat(budgetlimit),
-        savingsgoal: parseFloat(savingsgoal),
-        setaside: parseFloat(setaside),
-        budgetbalance: 0,
-      }]);
+      const { error } = await supabase
+        .from('budget')
+        .update({
+          payperiod_start,
+          payperiod_end,
+          budgetlimit: parseFloat(budgetlimit),
+          savingsgoal: parseFloat(savingsgoal),
+          setaside: parseFloat(setaside),
+        })
+        .eq('payperiod_id', payperiod_id); 
 
       if (error) throw error;
 
-      Alert.alert('Success', 'New budget created.');
+      Alert.alert('Success', 'Budget updated successfully.');
       router.push('/tabs/budget');
     } catch (err) {
       console.error(err);
-      Alert.alert('Error', 'Failed to create budget.');
+      Alert.alert('Error', 'Failed to update budget.');
     }
   };
 
-  if (!fontsLoaded) return null;
+  if (!fontsLoaded || loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#8BB04F" />
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Create New Budget</Text>
+      <Text style={styles.title}>Edit Budget</Text>
 
       {/* Start Date */}
       <View style={styles.inputGroup}>
@@ -179,7 +226,7 @@ export default function NewBudgetScreen() {
 
       {/* Save Button */}
       <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-        <Text style={styles.buttonText}>Save Budget</Text>
+        <Text style={styles.buttonText}>Update Budget</Text>
       </TouchableOpacity>
 
       {/* Cancel */}
@@ -190,7 +237,7 @@ export default function NewBudgetScreen() {
   );
 }
 
-// Styling
+// Styling (same as before)
 const styles = StyleSheet.create({
   container: {
     flex: 1,

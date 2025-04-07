@@ -86,9 +86,19 @@ export default function BudgetScreen() {
   };
 
   const formatDateRange = (start: string, end: string) => {
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    return `${startDate.toLocaleDateString()} – ${endDate.toLocaleDateString()}`;
+    // Create dates in UTC to avoid timezone shifting
+    const startDate = new Date(start + 'T00:00:00Z');
+    const endDate = new Date(end + 'T00:00:00Z');
+    
+    // Format options
+    const options: Intl.DateTimeFormatOptions = {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      timeZone: 'UTC'  // Ensure we use UTC for formatting
+    };
+    
+    return `${startDate.toLocaleDateString('en-US', options)} – ${endDate.toLocaleDateString('en-US', options)}`;
   };
 
   // Reusable UI component for displaying a budget card
