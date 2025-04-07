@@ -9,7 +9,6 @@ import { PurchaseHistoryService } from '../../lib/supabase_crud';
 
 export default function BudgetScreen() {
   const router = useRouter();
-
   const [fontsLoaded] = useFonts({
     'Afacad-Regular': require('../../assets/fonts/Afacad-Regular.ttf'),
     'Afacad-Bold': require('../../assets/fonts/Afacad-Bold.ttf'),
@@ -122,11 +121,11 @@ export default function BudgetScreen() {
 
       {/* Navigation buttons */}
       <View style={styles.buttonSection}>
-        <TouchableOpacity style={styles.button} onPress={() => router.push('/editBudget')}>
+        <TouchableOpacity style={styles.button} onPress={() => router.push('/budget/editBudget')}>
           <Text style={styles.buttonText}>Edit Budget</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.button} onPress={() => router.push('/newBudget')}>
+        <TouchableOpacity style={styles.button} onPress={() => router.push('/budget/newBudget')}>
           <Text style={styles.buttonText}>New Budget</Text>
         </TouchableOpacity>
 
