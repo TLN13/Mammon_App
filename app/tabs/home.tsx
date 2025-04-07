@@ -39,17 +39,34 @@ export default function HomeScreen() {
       if (authError) throw authError;
       
       if (user) {
-        const { data, error } = await supabase
+        // Get the current budget with all needed fields
+        const { data: budgetData, error } = await supabase
           .from('budget')
-          .select('budgetbalance')
+          .select('budgetlimit, savingsgoal, setaside, payperiod_start, payperiod_end')
           .eq('user_id', user.id)
           .order('payperiod_start', { ascending: false })
           .limit(1);
         
         if (error) throw error;
         
-        if (data && data.length > 0) {
-          setBudgetBalance(data[0].budgetbalance);
+        if (budgetData && budgetData.length > 0) {
+          const budget = budgetData[0];
+          
+          // Calculate expenses for this budget period
+          const expenses = await PurchaseHistoryService.getUserPurchasesByDateRange(
+            user.id, 
+            budget.payperiod_start, 
+            budget.payperiod_end
+          );
+          
+          const totalExpenses = expenses.reduce((sum, p) => sum + p.expense, 0);
+          
+          const remaining = (budget.budgetlimit ?? 0) - 
+                           (budget.savingsgoal ?? 0) - 
+                           (budget.setaside ?? 0) - 
+                           totalExpenses;
+          
+          setBudgetBalance(remaining);
         }
       }
     } catch (error) {
@@ -114,8 +131,8 @@ export default function HomeScreen() {
       day: 'numeric',
       year: 'numeric'
     });
-
   };
+
   useEffect(() => {
     const fetchData = async () => {
       await Promise.all([
