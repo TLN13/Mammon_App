@@ -146,7 +146,7 @@ export default function NewBudgetScreen() {
         <Text style={styles.label}>Budget Limit</Text>
         <TextInput
           style={styles.input}
-          keyboardType="numeric"
+          keyboardType="numbers-and-punctuation"
           value={budgetlimit}
           onChangeText={setBudgetlimit}
         />
@@ -158,7 +158,7 @@ export default function NewBudgetScreen() {
         <Text style={styles.label}>Savings Goal</Text>
         <TextInput
           style={styles.input}
-          keyboardType="numeric"
+          keyboardType="numbers-and-punctuation"
           value={savingsgoal}
           onChangeText={setSavingsgoal}
         />
@@ -170,7 +170,7 @@ export default function NewBudgetScreen() {
         <Text style={styles.label}>Set Aside</Text>
         <TextInput
           style={styles.input}
-          keyboardType="numeric"
+          keyboardType="numbers-and-punctuation"
           value={setaside}
           onChangeText={setSetaside}
         />
