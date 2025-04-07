@@ -154,7 +154,10 @@ export default function OverviewScreen() {
           const formattedDates: MarkedDatesType = {};
           let monthTotal = 0;
           purchases.forEach((purchase) => {
-            const dateISO = purchase.purchasedate; // ensure in YYYY-MM-DD format
+            const purchaseDate = new Date(purchase.purchasedate);
+            const adjustedDate = new Date(purchaseDate.getTime() + purchaseDate.getTimezoneOffset() * 60000);
+            const dateISO = format(adjustedDate, 'yyyy-MM-dd');
+            
             formattedDates[dateISO] = { marked: true, dotColor: '#FFBB00' };
             monthTotal += purchase.expense;
           });
@@ -191,21 +194,23 @@ export default function OverviewScreen() {
           // --- End Chart Data Generation for Month ---
         } else if (isWeek) {
           // For week view, determine the week boundaries in MM/dd/yyyy.
-          const weekStart = format(currentWeekStart, 'MM/dd/yyyy');
-          const weekEnd = format(addDays(currentWeekStart, 6), 'MM/dd/yyyy');
+          const weekStartLocal = format(currentWeekStart, 'yyyy-MM-dd');
+          const weekEndLocal = format(addDays(currentWeekStart, 6), 'yyyy-MM-dd');
           // Fetch purchases by date range.
           const purchases = await PurchaseHistoryService.getUserPurchasesByDateRange(
             user.id,
-            weekStart,
-            weekEnd
+            weekStartLocal,
+            weekEndLocal
           );
           // Build daily totals using MM/dd/yyyy format.
           const dailyTotals: Record<string, number> = {};
           let weekTotal = 0;
           purchases.forEach((purchase) => {
-            // Convert purchase date to a Date and reformat.
+            // Convert purchase date to local date string (MM/dd/yyyy)
             const purchaseDate = new Date(purchase.purchasedate);
-            const formattedDate = format(purchaseDate, 'MM/dd/yyyy');
+            const localDate = new Date(purchaseDate.getTime() + purchaseDate.getTimezoneOffset() * 60000);
+            const formattedDate = format(localDate, 'MM/dd/yyyy');
+
             dailyTotals[formattedDate] = (dailyTotals[formattedDate] || 0) + purchase.expense;
             weekTotal += purchase.expense;
           });
