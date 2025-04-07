@@ -88,9 +88,9 @@ export default function SignIn() {
         <TouchableOpacity style={styles.linkButton} onPress={() => router.push('/signIn/signUp')}>
           <Text style={styles.linkText}>Sign Up</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.linkButton}>
+        {/* <TouchableOpacity style={styles.linkButton}>
           <Text style={styles.linkText} onPress={() => router.push('/signIn/passwordRecovery')}>Can't access your account?</Text>
-        </TouchableOpacity>
+        </TouchableOpacity> */}
       </View>
     </View>
   );
