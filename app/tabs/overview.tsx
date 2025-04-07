@@ -26,9 +26,11 @@ export default function OverviewScreen() {
   const [isChart, setIsChart] = useState(false);
   const [currentWeekStart, setCurrentWeekStart] = useState(startOfWeek(new Date(), { weekStartsOn: 1 })); // week starts on Monday
   const [weekDailyTotals, setWeekDailyTotals] = useState<Record<string, number>>({});
-  const [chartType, setChartType] = useState('pie'); // Default to pie chart
+  const [chartType, setChartType] = useState<'pie' | 'bar' | 'line'>('pie');
   const [timeRange, setTimeRange] = useState('month'); // Default to month
-  const [chartData, setChartData] = useState<(PieChartData | number)[]>([]);
+  const [pieChartData, setPieChartData] = useState<PieChartData[]>([]);
+  const [barChartData, setBarChartData] = useState<{labels: string[], values: number[]}>({labels: [], values: []});
+  const [lineChartData, setLineChartData] = useState<{labels: string[], values: number[]}>({labels: [], values: []});
   const [categories, setCategories] = useState<string[]>([]);
 
   let [fontsLoaded] = useFonts({
@@ -230,71 +232,71 @@ export default function OverviewScreen() {
     fetchData();
   }, [currentMonth, currentWeekStart, isMonth, isWeek]);
 
+  const fetchChartData = async () => {
+    try {
+      const user = await AuthService.getCurrentUser();
+      if (!user || !isChart) return;
+  
+      const today = new Date();
+      const oneYearAgo = subDays(today, 365);
+      const startDate = format(oneYearAgo, 'yyyy-MM-dd');
+      const endDate = format(today, 'yyyy-MM-dd');
+  
+      const purchases = await PurchaseHistoryService.getUserPurchasesByDateRange(
+        user.id,
+        startDate,
+        endDate
+      );
+  
+      // Process data for all chart types
+      const categoryMap = new Map<string, number>();
+      const monthlyTotals = new Map<string, number>();
+      
+      purchases.forEach(p => {
+        // Category extraction
+        const match = p.description.match(/\(([^)]+)\)/);
+        const category = match?.[1]?.trim() || 'Other';
+        categoryMap.set(category, (categoryMap.get(category) || 0) + p.expense);
+  
+        // Monthly aggregation
+        const monthKey = format(new Date(p.purchasedate), 'MMM yyyy');
+        monthlyTotals.set(monthKey, (monthlyTotals.get(monthKey) || 0) + p.expense);
+      });
+  
+      // Pie Chart Data
+      setPieChartData(Array.from(categoryMap.entries()).map(([name, population], index) => ({
+        name,
+        population,
+        color: `rgba(139, 176, 79, ${0.5 + index * 0.1})`,
+        legendFontColor: '#8BB04F',
+        legendFontSize: 12
+      })));
+  
+      // Bar Chart Data
+      setBarChartData({
+        labels: Array.from(categoryMap.keys()),
+        values: Array.from(categoryMap.values())
+      });
+  
+      // Line Chart Data (last 12 months)
+      const months = Array.from({ length: 12 }, (_, i) => 
+        format(subMonths(today, 11 - i), 'MMM yyyy')
+      );
+      setLineChartData({
+        labels: months,
+        values: months.map(month => monthlyTotals.get(month) || 0)
+      });
+  
+    } catch (error) {
+      console.error('Error fetching chart data:', error);
+    }
+  };
+
   useEffect(() => {
-    const fetchChartData = async () => {
-      try {
-        const user = await AuthService.getCurrentUser();
-        if (!user || !isChart) return;
-  
-        const today = new Date();
-        const oneYearAgo = subDays(today, 365);
-        const startDate = format(oneYearAgo, 'yyyy-MM-dd');
-        const endDate = format(today, 'yyyy-MM-dd');
-  
-        const purchases = await PurchaseHistoryService.getUserPurchasesByDateRange(
-          user.id,
-          startDate,
-          endDate
-        );
-  
-        // Process categories for pie/bar charts
-        const categoryMap = new Map<string, number>();
-        const monthlyTotals = new Map<string, number>();
-        
-        purchases.forEach(p => {
-          // Category extraction
-          const match = p.description.match(/\(([^)]+)\)/);
-          const category = match?.[1]?.trim() || 'Other';
-          categoryMap.set(category, (categoryMap.get(category) || 0) + p.expense);
-  
-          // Monthly aggregation for line chart
-          const monthKey = format(new Date(p.purchasedate), 'MMM yyyy');
-          monthlyTotals.set(monthKey, (monthlyTotals.get(monthKey) || 0) + p.expense);
-        });
-  
-        // Line Chart Data (Monthly)
-        const months = Array.from({ length: 12 }, (_, i) => 
-          format(subMonths(today, 11 - i), 'MMM yyyy')
-        );
-        const lineData = months.map(month => monthlyTotals.get(month) || 0);
-  
-        // Pie/Bar Chart Data (Yearly categories)
-        const categories = Array.from(categoryMap.keys());
-        const categoryValues = Array.from(categoryMap.values());
-  
-        if (chartType === 'pie') {
-          const pieData = categories.map((category, index) => ({
-            name: category,
-            population: categoryMap.get(category) || 0,
-            color: `rgba(139, 176, 79, ${0.5 + index * 0.1})`,
-            legendFontColor: '#8BB04F',
-            legendFontSize: 12
-          }));
-          setChartData(pieData);
-        } else {
-          setChartData(chartType === 'line' ? lineData : categoryValues);
-          setCategories(chartType === 'line' ? months : categories);
-        }
-  
-      } catch (error) {
-        console.error('Error fetching chart data:', error);
-      }
-    };
-  
-    if (isChart) fetchChartData();
+    if (isChart) {
+      fetchChartData();
+    }
   }, [isChart, chartType]);
-  
-  
 
   if (!fontsLoaded) return <View />;
 
@@ -430,29 +432,33 @@ export default function OverviewScreen() {
 {isChart && (
   <View style={styles.chartView}>
     <RNPickerSelect
-      onValueChange={setChartType}
-      value={chartType}
+      onValueChange={(value: 'pie' | 'bar' | 'line') => {
+        setChartType(value || 'pie');
+      }}
       items={[
         { label: 'Pie Chart', value: 'pie' },
         { label: 'Bar Chart', value: 'bar' },
         { label: 'Line Chart', value: 'line' },
       ]}
+      value={chartType}
       style={{
         inputIOS: styles.input,
         inputAndroid: styles.input,
       }}
+      placeholder={{}}
+      useNativeAndroidPickerStyle={false}
     />
+
 
     {chartType === 'line' && (
       <LineChart
         data={{
-          labels: categories,
-          datasets: [{ data: chartData.filter((item): item is number => typeof item === 'number') }]
+          labels: lineChartData.labels,
+          datasets: [{ data: lineChartData.values }]
         }}
         width={Dimensions.get('window').width - 40}
         height={220}
         yAxisLabel="$"
-        yAxisSuffix=""
         chartConfig={{
           backgroundColor: '#230A15',
           backgroundGradientFrom: '#230A15',
@@ -474,13 +480,13 @@ export default function OverviewScreen() {
     {chartType === 'bar' && (
       <BarChart
         data={{
-          labels: categories,
-          datasets: [{ data: chartData.filter((item): item is number => typeof item === 'number') }]
+          labels: barChartData.labels,
+          datasets: [{ data: barChartData.values }]
         }}
         width={Dimensions.get('window').width - 40}
         height={220}
         yAxisLabel="$"
-        yAxisSuffix="" // Add this line to fix the error
+        yAxisSuffix="" 
         chartConfig={{
           backgroundColor: '#230A15',
           backgroundGradientFrom: '#230A15',
@@ -494,7 +500,7 @@ export default function OverviewScreen() {
 
     {chartType === 'pie' && (
       <PieChart
-        data={chartData}
+        data={pieChartData}
         width={Dimensions.get('window').width - 40}
         height={220}
         accessor="population"
@@ -661,5 +667,24 @@ const styles = StyleSheet.create({
     backgroundColor: '#230A15',
     marginBottom: 10,
   },
+  inputIOS: {
+    color: '#8BB04F',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: '#980058',
+    borderRadius: 4,
+    backgroundColor: '#230A15',
+    marginBottom: 10,
+  },
+  inputAndroid: {
+    color: '#8BB04F',
+    paddingVertical: 8,
+    paddingHorizontal: 10,
+    borderWidth: 1,
+    borderColor: '#980058',
+    borderRadius: 4,
+    backgroundColor: '#230A15',
+    marginBottom: 10,
+  },
 });
-
