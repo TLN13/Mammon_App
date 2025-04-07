@@ -87,8 +87,8 @@ export const UserService = {
 };
 
 export const PayPeriodService = {
+  // First try to find an existing current pay period
   async getOrCreateCurrentPayPeriod(userId: string): Promise<string> {
-    // First try to find an existing current pay period
     const { data: existing, error: findError } = await supabase
       .from('budget')
       .select('payperiod_id')
@@ -97,9 +97,7 @@ export const PayPeriodService = {
       .lte('payperiod_start', new Date().toISOString())
       .single();
 
-    if (!findError && existing) {
-      return existing.payperiod_id;
-    }
+    if (!findError && existing) return existing.payperiod_id;
 
     // If none exists, create a new one
     const { data: newPayPeriod, error: createError } = await supabase
@@ -107,7 +105,7 @@ export const PayPeriodService = {
       .insert([{
         user_id: userId,
         payperiod_start: new Date().toISOString(),
-        payperiod_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+        payperiod_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         budgetlimit: 0,
         budgetbalance: 0,
         setaside: 0,
@@ -118,7 +116,43 @@ export const PayPeriodService = {
 
     if (createError) throw createError;
     return newPayPeriod.payperiod_id;
-  }
+  },
+
+  //Update an existing budget record
+  async updateBudget(payperiod_id: string, updates: Partial<any>) {
+    const { data, error } = await supabase
+      .from('budget')
+      .update(updates)
+      .eq('payperiod_id', payperiod_id)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  //Create a new budget record
+  async createBudget(newBudget: {
+    user_id: string;
+    payperiod_start: string;
+    payperiod_end: string;
+    budgetlimit: number;
+    savingsgoal: number;
+    setaside: number;
+    budgetbalance?: number;
+  }) {
+    const { data, error } = await supabase
+      .from('budget')
+      .insert([{
+        ...newBudget,
+        budgetbalance: newBudget.budgetbalance ?? 0
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
 };
 
 export const PurchaseHistoryService = {
